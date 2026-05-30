@@ -201,3 +201,114 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
   .uploads, .metrics, .qualityPanel { grid-template-columns: 1fr; }
   .filters { grid-template-columns: 1fr; }
 }
+
+
+.sourcesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin: 18px 0;
+}
+.sourceBox {
+  border-radius: 24px;
+  padding: 18px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(15,23,42,.07);
+  background: white;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sourceBox.ok {
+  background: linear-gradient(135deg, #ecfdf5, #ffffff);
+  border-color: #22c55e;
+}
+.sourceBox.warning {
+  background: linear-gradient(135deg, #fff7ed, #ffffff);
+  border-color: #f59e0b;
+}
+.sourceBox.danger {
+  background: linear-gradient(135deg, #fef2f2, #ffffff);
+  border-color: #ef4444;
+}
+.sourceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.sourceHeader strong {
+  font-size: 18px;
+}
+.sourceHeader span {
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 900;
+  background: #0f172a;
+  color: white;
+}
+.sourceBox.ok .sourceHeader span { background: #16a34a; }
+.sourceBox.danger .sourceHeader span { background: #dc2626; }
+.sourceBox p {
+  margin: 0;
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.35;
+}
+.sourceBox details {
+  margin-top: 4px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 8px;
+}
+.sourceBox summary {
+  cursor: pointer;
+  color: #334155;
+  font-weight: 800;
+  font-size: 13px;
+}
+.helpText {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin: 8px 0 !important;
+}
+
+.healthPanel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+.healthCard {
+  border-radius: 22px;
+  padding: 16px;
+  border: 2px solid #e2e8f0;
+  box-shadow: 0 8px 22px rgba(15,23,42,.06);
+}
+.healthCard.good {
+  background: #ecfdf5;
+  border-color: #22c55e;
+}
+.healthCard.bad {
+  background: #fff7ed;
+  border-color: #f97316;
+}
+.healthCard span {
+  display: block;
+  font-weight: 900;
+  color: #475569;
+  font-size: 13px;
+}
+.healthCard strong {
+  display: block;
+  font-size: 32px;
+  margin-top: 5px;
+}
+.healthCard p {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .sourcesGrid, .healthPanel { grid-template-columns: 1fr; }
+}
