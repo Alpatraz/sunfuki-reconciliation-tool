@@ -472,3 +472,25 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
     grid-template-columns: 1fr;
   }
 }
+
+
+.cloudActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.cloudActions button {
+  font-size: 12px;
+  padding: 8px 11px;
+}
+.cloudActions button:first-child {
+  background: #16a34a;
+  color: #fff;
+  border-color: #16a34a;
+}
+.cloudActions button:nth-child(2) {
+  background: #1d4ed8;
+  color: #fff;
+  border-color: #1d4ed8;
+}
