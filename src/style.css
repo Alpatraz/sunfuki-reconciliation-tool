@@ -497,3 +497,40 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
 
 .manualLinkPanel{background:rgba(255,255,255,.96);border:2px solid #dbe3ef;border-radius:24px;padding:18px;margin:16px 0;box-shadow:0 12px 30px rgba(15,23,42,.08)}
 .manualLinkPanel h2{margin:0 0 6px}.manualLinkRow{display:grid;grid-template-columns:1.2fr 1fr auto;gap:12px;align-items:center;padding:12px;border:1px solid #e2e8f0;border-radius:16px;margin-top:10px;background:#f8fafc}.manualLinkRow strong{display:block}.manualLinkRow span{color:#64748b;font-size:13px}.manualLinkRow select{border:1px solid #cbd5e1;border-radius:12px;padding:10px}.manualLinkRow button{background:#1d4ed8;color:white;border-color:#1d4ed8}@media(max-width:1000px){.manualLinkRow{grid-template-columns:1fr}}
+
+.manualParticipantPanel {
+  background: rgba(255,255,255,.96);
+  border: 2px solid #dbe3ef;
+  border-radius: 24px;
+  padding: 18px;
+  margin: 16px 0;
+  box-shadow: 0 12px 30px rgba(15,23,42,.08);
+}
+.manualForm {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr)) auto;
+  gap: 10px;
+  align-items: end;
+}
+.manualForm input,
+.manualSizeRow input {
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  padding: 10px;
+}
+.manualSizeRow {
+  display: grid;
+  grid-template-columns: 1.4fr 180px auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  margin-top: 10px;
+  background: #f8fafc;
+}
+.manualSizeRow strong { display:block; }
+.manualSizeRow span { color:#64748b; font-size:13px; }
+@media (max-width: 1000px) {
+  .manualForm, .manualSizeRow { grid-template-columns: 1fr; }
+}
