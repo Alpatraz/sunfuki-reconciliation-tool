@@ -368,11 +368,35 @@ async function loadShopifyRowsFromSupabase(){
   const url=import.meta.env.VITE_SUPABASE_URL;
   const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
   if(!url||!key)throw new Error("Variables Supabase manquantes.");
-  const endpoint=`${url.replace(/\/$/,"")}/rest/v1/shopify_order_items?select=*&order=order_number.asc`;
-  const res=await fetch(endpoint,{headers:{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json"}});
-  if(!res.ok){const text=await res.text();throw new Error(`Erreur chargement Shopify Supabase ${res.status}: ${text}`);}
-  const data=await res.json();
-  return (data||[]).map(r=>({
+
+  const base=`${url.replace(/\/$/,"")}/rest/v1/shopify_order_items?select=*&order=id.asc`;
+  const pageSize=1000;
+  let from=0;
+  let all=[];
+
+  while(true){
+    const to=from+pageSize-1;
+    const res=await fetch(base,{
+      headers:{
+        apikey:key,
+        Authorization:`Bearer ${key}`,
+        "Content-Type":"application/json",
+        Range:`${from}-${to}`,
+        Prefer:"count=exact"
+      }
+    });
+    if(!res.ok){
+      const text=await res.text();
+      throw new Error(`Erreur chargement Shopify Supabase ${res.status}: ${text}`);
+    }
+    const batch=await res.json();
+    all=all.concat(batch||[]);
+    if(!batch || batch.length<pageSize)break;
+    from+=pageSize;
+    if(from>50000)throw new Error("Sécurité : plus de 50 000 lignes Shopify à charger.");
+  }
+
+  return (all||[]).map(r=>({
     kind:r.kind||"",
     order:r.order_number||"",
     competitor:r.competitor||"",
@@ -499,7 +523,7 @@ async function loadShopifyCloud(){
     const rows=await loadShopifyRowsFromSupabase();
     setShopifyCloudRows(rows);
     setFiles(p=>({...p,shopify:`Supabase shopify_order_items (${rows.length} lignes)`}));
-    setShopifyCloudStatus(`Shopify chargé depuis Supabase : ${rows.length} lignes`);
+    setShopifyCloudStatus(`Shopify chargé depuis Supabase : ${rows.length} lignes complètes`);
   }catch(e){
     setShopifyCloudStatus(e.message||"Erreur chargement Shopify");
   }
@@ -579,7 +603,7 @@ const currentGroup=tabGroups.find(g=>g.tabs.includes(tab))||tabGroups[0];
 const visibleTabKeys=currentGroup.tabs.filter(k=>views[k]);
 function selectGroup(g){const first=g.tabs.find(k=>views[k]);if(first)setTab(first);}
 const current=views[tab];const filteredRows=tab==="dashboard"?dashboardFiltered:applyFilters(current.rows||[]);
-return <div className="app"><header><h1>Réconciliation Sunfuki V30.1</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
+return <div className="app"><header><h1>Réconciliation Sunfuki V30.2</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
         <div className={sourceStateClass(fitofanRaw.length)}>
           <div className="sourceTop">
             <strong>1. Fitofan</strong>
