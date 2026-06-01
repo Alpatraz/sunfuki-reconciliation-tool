@@ -578,3 +578,34 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
 @media(max-width:900px){
   .engagementTools{grid-template-columns:1fr}
 }
+
+.groupedNavPanel{
+  margin:18px 0;
+  padding:14px;
+  background:#eef4fb;
+  border:1px solid #cbd5e1;
+  border-radius:24px;
+}
+.navGroups,.cleanTabButtons{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+.navGroups{margin-bottom:12px}
+.navGroups button,.cleanTabButtons button{
+  border-radius:999px;
+  border:1px solid #cbd5e1;
+  background:#fff;
+  color:#0f172a;
+  padding:10px 16px;
+  font-weight:800;
+}
+.navGroups button.active,.cleanTabButtons button.active{
+  background:#0f172a;
+  color:#fff;
+  border-color:#0f172a;
+}
+/* masque l'ancienne navigation trop longue si elle existe */
+.tabs:not(.cleanTabButtons), .tabNav:not(.cleanTabButtons){
+  display:none !important;
+}
