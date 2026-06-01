@@ -556,3 +556,25 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
 .engagementLinkRow button{background:#1d4ed8;color:white;border-color:#1d4ed8}
 .engagementLinkRow.linked button{background:#dc2626;border-color:#dc2626}
 @media(max-width:1000px){.engagementLinkRow{grid-template-columns:1fr}}
+
+.engagementTools{
+  display:grid;
+  grid-template-columns:minmax(260px,1fr) 220px auto auto;
+  gap:10px;
+  align-items:center;
+  margin:14px 0;
+}
+.engagementTools input,
+.engagementTools select{
+  border:1px solid #cbd5e1;
+  border-radius:14px;
+  padding:11px 12px;
+  background:white;
+}
+.engagementTools span{
+  color:#64748b;
+  font-weight:700;
+}
+@media(max-width:900px){
+  .engagementTools{grid-template-columns:1fr}
+}
