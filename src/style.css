@@ -545,3 +545,14 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
 .sizeValidationRow input{border:1px solid #cbd5e1;border-radius:12px;padding:10px}
 .sizeValidationRow button{background:#16a34a;color:white;border-color:#16a34a}
 @media(max-width:1000px){.sizeValidationRow{grid-template-columns:1fr}}
+
+.engagementManagementPanel{background:rgba(255,255,255,.96);border:2px solid #dbe3ef;border-radius:24px;padding:18px;margin:16px 0;box-shadow:0 12px 30px rgba(15,23,42,.08)}
+.engagementLinkRow{display:grid;grid-template-columns:1.4fr 1fr auto;gap:12px;align-items:center;padding:12px;border-radius:16px;margin-top:10px;border:2px solid #e2e8f0}
+.engagementLinkRow.linked{background:#ecfdf5;border-color:#22c55e}
+.engagementLinkRow.missing{background:#fff7ed;border-color:#f97316}
+.engagementLinkRow strong{display:block}
+.engagementLinkRow span,.engagementLinkRow small{display:block;color:#64748b;font-size:13px;margin-top:3px}
+.engagementLinkRow select{border:1px solid #cbd5e1;border-radius:12px;padding:10px}
+.engagementLinkRow button{background:#1d4ed8;color:white;border-color:#1d4ed8}
+.engagementLinkRow.linked button{background:#dc2626;border-color:#dc2626}
+@media(max-width:1000px){.engagementLinkRow{grid-template-columns:1fr}}
