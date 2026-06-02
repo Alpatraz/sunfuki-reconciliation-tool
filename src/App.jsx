@@ -701,7 +701,7 @@ const correctedMissingEngagementRows=resolvedEngagementState.missing;
 const engagementManagementFilteredRows=useMemo(()=>{const q=norm(engagementSearch);return engagementManagementRows.filter(r=>{const txt=norm(`${r.Compétiteur} ${r.Dojo} ${r.Équipe} ${r.Commande} ${r["Nom Shopify"]} ${r.Statut}`);const okSearch=!q||txt.includes(q);const okStatus=engagementStatusFilter==="all"||(engagementStatusFilter==="linked"&&r.Statut==="LIÉ")||(engagementStatusFilter==="missing"&&r.Statut!=="LIÉ");return okSearch&&okStatus;});},[engagementManagementRows,engagementSearch,engagementStatusFilter]);
 const fitofanReport=useMemo(()=>fitofan.competitors.map(f=>{const rows=reconciled.filter(r=>r.ckey===f.key);const products=rows.filter(r=>r.kind==="product"&&!r.excluded);const engagementKey=`${f.key}|${canonicalTeamKey(f.team)}`;const engagements=resolvedEngagementState.engagementByCompetitorTeam.get(engagementKey)||[];const orders=[...new Set([...rows.map(r=>r.order).filter(Boolean),...engagements.map(e=>e.order).filter(Boolean)])];return{Compétiteur:f.competitor,Email:f.email,Dojo:f.dojo,Équipe:f.team,FITOFAN:f.fitofanStatus||"","Inscrit Fitofan":"Oui","Engagement signé":engagements.length?"Oui":"Non","Commandes liées":orders.join(" | "),"A acheté équipement":products.length?"Oui":"Non","Produits commandés":products.map(r=>`${r.product} (${r.finalSize||"taille manquante"})`).join(" | "),"Tailles Shopify":products.map(r=>`${r.order} - ${r.product}: ${r.shopifySize||"vide"}`).join(" | "),"Tailles Supabase":products.map(r=>`${r.order} - ${r.product}: ${r.supabaseSize||"aucune"}`).join(" | "),"Tailles finales":products.map(r=>`${r.order} - ${r.product}: ${r.finalSize||"taille manquante"} (${r.sourceSize||"aucune source"})`).join(" | "),"Tailles manquantes":products.filter(r=>r.missing).length,Commentaires:[...new Set(rows.map(r=>r.comments).filter(Boolean))].join(" | ")};}),[fitofan,reconciled,resolvedEngagementState]);
 const supabaseLinkedKeys=new Set(reconciled.filter(r=>r.supabaseSize).map(r=>productKey(r.order,r.productKey)));const supabaseAudit=supabase.map(s=>({Commande:s.order,Compétiteur:s.competitor,Produit:s.rawProduct,"Produit normalisé":s.productKey,Taille:s.size,Commentaire:s.comments,Type:s.kind,Statut:s.kind==="product"&&s.size?(supabaseLinkedKeys.has(productKey(s.order,s.productKey))?"Reliée":"NON RELIÉE"):"Commentaire / engagement conservé"}));
-const auditRows=[{Indicateur:"Lignes Fitofan compétiteurs",Valeur:fitofan.competitors.length},{Indicateur:"Compétiteurs FITOFAN = non",Valeur:fitofan.competitors.filter(f=>isFitofanNo(f.fitofanStatus)).length},{Indicateur:"Shopify absent liste compétiteurs",Valeur:shopifyUnknownCompetitorRows.length},{Indicateur:"Fitofan source",Valeur:files.fitofan||"Non chargé"},{Indicateur:"Commentaires Fitofan exclus",Valeur:fitofan.comments.length},{Indicateur:"Lignes Shopify produits/engagements",Valeur:shopify.length},{Indicateur:"Articles actifs analysés",Valeur:reconciled.filter(r=>r.kind==="product"&&!r.excluded).reduce((s,r)=>s+r.effectiveQty,0)},{Indicateur:"Articles exclus annulés/remboursés",Valeur:reconciled.filter(r=>r.kind==="product"&&r.excluded).length},{Indicateur:"Tailles Supabase appliquées",Valeur:reconciled.filter(r=>r.supabaseSize).length},{Indicateur:"Tailles manquantes",Valeur:reconciled.filter(r=>r.missing).length},{Indicateur:"Réponses Supabase total",Valeur:supabase.length},{Indicateur:"Réponses Supabase produits non reliées",Valeur:supabaseAudit.filter(r=>r.Statut==="NON RELIÉE").length},{Indicateur:"Total produits fournisseur",Valeur:supplierRows.reduce((s,r)=>s+r.Quantité,0)}];
+const auditRows=[{Indicateur:"Lignes Fitofan compétiteurs",Valeur:fitofan.competitors.length},{Indicateur:"Fitofan source",Valeur:files.fitofan||"Non chargé"},{Indicateur:"Commentaires Fitofan exclus",Valeur:fitofan.comments.length},{Indicateur:"Lignes Shopify produits/engagements",Valeur:shopify.length},{Indicateur:"Articles actifs analysés",Valeur:reconciled.filter(r=>r.kind==="product"&&!r.excluded).reduce((s,r)=>s+r.effectiveQty,0)},{Indicateur:"Articles exclus annulés/remboursés",Valeur:reconciled.filter(r=>r.kind==="product"&&r.excluded).length},{Indicateur:"Tailles Supabase appliquées",Valeur:reconciled.filter(r=>r.supabaseSize).length},{Indicateur:"Tailles manquantes",Valeur:reconciled.filter(r=>r.missing).length},{Indicateur:"Réponses Supabase total",Valeur:supabase.length},{Indicateur:"Réponses Supabase produits non reliées",Valeur:supabaseAudit.filter(r=>r.Statut==="NON RELIÉE").length},{Indicateur:"Total produits fournisseur",Valeur:supplierRows.reduce((s,r)=>s+r.Quantité,0)}];
 const dashboardRows=detailRows.filter(r=>r.Type==="product"&&r["Exclu fournisseur"]!=="Oui");const filterOptions={dojo:uniqueSorted([...dashboardRows.map(r=>r.Dojo),...fitofanReport.map(r=>r.Dojo)]),team:uniqueSorted([...dashboardRows.map(r=>r.Équipe),...fitofanReport.map(r=>r.Équipe)]),product:uniqueSorted(dashboardRows.map(r=>r.Produit)),competitor:uniqueSorted([...dashboardRows.map(r=>r.Compétiteur),...fitofanReport.map(r=>r.Compétiteur)])};function applyFilters(rows){return rows.filter(row=>{const text=norm(Object.values(row).join(" "));if(search&&!text.includes(norm(search)))return false;if(filters.dojo&&norm(row.Dojo)!==norm(filters.dojo))return false;if(filters.team&&norm(row.Équipe)!==norm(filters.team))return false;if(filters.product&&!norm(Object.values(row).join(" ")).includes(norm(filters.product)))return false;if(filters.competitor&&norm(row.Compétiteur)!==norm(filters.competitor))return false;return true;});}
 const dashboardFiltered=applyFilters(dashboardRows);const dashboardStats={competitors:uniqueSorted(dashboardFiltered.map(r=>r.Compétiteur)).length,quantity:dashboardFiltered.reduce((s,r)=>s+(Number(r["Qté effective"])||0),0),missing:dashboardFiltered.filter(r=>r.Statut.includes("TAILLE MANQUANTE")).length,supabase:dashboardFiltered.filter(r=>r["Source taille"]==="Supabase").length,initialMissing:shopifyInitialMissingRows.length,regularized:shopifyInitialMissingRows.filter(r=>r["Statut régularisation"]==="RÉGULARISÉ PAR SUPABASE").length,unusual:unusualSizeRows.length};const competitorsMissingSizes=useMemo(()=>{const map=new Map();dashboardRows.filter(r=>String(r.Statut||"").includes("TAILLE MANQUANTE")).forEach(r=>{const name=r.Compétiteur||"Compétiteur non précisé";const current=map.get(name)||{Compétiteur:name,Dojo:r.Dojo||"",Équipe:r.Équipe||"",Commandes:new Set(),Produits:[]};if(r.Commande)current.Commandes.add(r.Commande);current.Produits.push(`${r.Produit||""} (${r.Commande||""})`);map.set(name,current);});return Array.from(map.values()).map(r=>({Compétiteur:r.Compétiteur,Dojo:r.Dojo,Équipe:r.Équipe,Commandes:Array.from(r.Commandes).join(" | "),"Produits sans taille":r.Produits.join(" | ")}));},[dashboardRows]);const competitorsMissingEngagement=useMemo(()=>fitofanReport.filter(r=>r["Inscrit Fitofan"]==="Oui"&&r["Engagement signé"]!=="Oui").map(r=>({Compétiteur:r.Compétiteur,Dojo:r.Dojo,Équipe:r.Équipe,Email:r.Email,"Commandes liées":r["Commandes liées"],"A acheté équipement":r["A acheté équipement"]})),[fitofanReport]);const linkedOrdersSet=useMemo(()=>new Set(manualLinks.map(l=>l.order_number)),[manualLinks]);
 const manualReconciliationRows=useMemo(()=>{
@@ -733,10 +733,77 @@ const supplierInternalRows=useMemo(()=>reconciled.filter(r=>r.kind==="product"&&
 
 const engagementCorrectionsMap=useMemo(()=>{const unlink=new Set();const link=new Set();engagementCorrections.forEach(c=>{const k=engagementCorrectionKey(c.order_number,c.competitor,c.team);if(c.action==="unlink")unlink.add(k);if(c.action==="link")link.add(k);});return{unlink,link};},[engagementCorrections]);
 const engagementCorrectionsRows=engagementCorrections.map(c=>({ID:c.id,Commande:c.order_number,Compétiteur:c.competitor,Équipe:c.team,Action:c.action,Créé:c.created_at||""}));
-const fitofanKnownKeys=useMemo(()=>new Set(fitofan.competitors.map(f=>f.key)),[fitofan]);
-const shopifyUnknownCompetitorRows=useMemo(()=>{const map=new Map();reconciled.forEach(r=>{if(!r.competitor)return;const key=competitorKey(r.competitor);if(fitofanKnownKeys.has(key))return;const cur=map.get(key)||{Compétiteur:r.competitor,Email:r.email||"",Dojo:r.dojo||"",Équipe:r.team||"",Commandes:new Set(),Produits:[],Engagement:false,Équipement:false,Statut:"ABSENT DU FICHIER COMPÉTITEURS"};if(r.order)cur.Commandes.add(r.order);if(isEngagementOrderRow(r))cur.Engagement=true;if(r.kind==="product"&&!r.excluded){cur.Équipement=true;cur.Produits.push(`${r.product} (${r.finalSize||"taille manquante"})`);}map.set(key,cur);});return Array.from(map.values()).map(r=>({Compétiteur:r.Compétiteur,Email:r.Email,Dojo:r.Dojo,Équipe:r.Équipe,Commandes:Array.from(r.Commandes).join(" | "),"A signé engagement":r.Engagement?"Oui":"Non","A acheté équipement":r.Équipement?"Oui":"Non",Produits:r.Produits.join(" | "),Statut:r.Statut}));},[reconciled,fitofanKnownKeys]);
-const notFitofanWithEngagementRows=useMemo(()=>fitofan.competitors.filter(f=>isFitofanNo(f.fitofanStatus)).map(f=>{const rows=reconciled.filter(r=>r.ckey===f.key);const engagements=rows.filter(r=>isEngagementOrderRow(r));const products=rows.filter(r=>r.kind==="product"&&!r.excluded);return{Compétiteur:f.competitor,Email:f.email,Dojo:f.dojo,Équipe:f.team,FITOFAN:f.fitofanStatus||"non","Engagement signé":engagements.length?"Oui":"Non","A acheté équipement":products.length?"Oui":"Non","Commandes liées":[...new Set(rows.map(r=>r.order).filter(Boolean))].join(" | "),Produits:products.map(r=>`${r.product} (${r.finalSize||"taille manquante"})`).join(" | ")};}).filter(r=>r["Engagement signé"]==="Oui"||r["A acheté équipement"]==="Oui"),[fitofan,reconciled]);
-const fitofanStatusAuditRows=useMemo(()=>fitofan.competitors.map(f=>({Compétiteur:f.competitor,Email:f.email,Dojo:f.dojo,Équipe:f.team,FITOFAN:f.fitofanStatus||"",Source:f.manual?"Ajout manuel":"Fichier / Supabase"})),[fitofan]);
+const fitofanKnownKeys=useMemo(()=>new Set((fitofan?.competitors||[]).map(f=>f.key)),[fitofan]);
+const shopifyUnknownCompetitorRows=useMemo(()=>{
+  const map=new Map();
+  (reconciled||[]).forEach(r=>{
+    if(!r.competitor)return;
+    const key=competitorKey(r.competitor);
+    if(fitofanKnownKeys.has(key))return;
+    const cur=map.get(key)||{
+      Compétiteur:r.competitor,
+      Email:r.email||"",
+      Dojo:r.dojo||"",
+      Équipe:r.team||"",
+      Commandes:new Set(),
+      Produits:[],
+      Engagement:false,
+      Équipement:false,
+      Statut:"ABSENT DU FICHIER COMPÉTITEURS"
+    };
+    if(r.order)cur.Commandes.add(r.order);
+    if(isEngagementOrderRow(r))cur.Engagement=true;
+    if(r.kind==="product"&&!r.excluded){
+      cur.Équipement=true;
+      cur.Produits.push(`${r.product} (${r.finalSize||"taille manquante"})`);
+    }
+    map.set(key,cur);
+  });
+  return Array.from(map.values()).map(r=>({
+    Compétiteur:r.Compétiteur,
+    Email:r.Email,
+    Dojo:r.Dojo,
+    Équipe:r.Équipe,
+    Commandes:Array.from(r.Commandes).join(" | "),
+    "A signé engagement":r.Engagement?"Oui":"Non",
+    "A acheté équipement":r.Équipement?"Oui":"Non",
+    Produits:r.Produits.join(" | "),
+    Statut:r.Statut
+  }));
+},[reconciled,fitofanKnownKeys]);
+
+const notFitofanWithEngagementRows=useMemo(()=>{
+  return (fitofan?.competitors||[])
+    .filter(f=>isFitofanNo(f.fitofanStatus))
+    .map(f=>{
+      const rows=(reconciled||[]).filter(r=>r.ckey===f.key);
+      const engagements=rows.filter(r=>isEngagementOrderRow(r));
+      const products=rows.filter(r=>r.kind==="product"&&!r.excluded);
+      return {
+        Compétiteur:f.competitor,
+        Email:f.email,
+        Dojo:f.dojo,
+        Équipe:f.team,
+        FITOFAN:f.fitofanStatus||"non",
+        "Engagement signé":engagements.length?"Oui":"Non",
+        "A acheté équipement":products.length?"Oui":"Non",
+        "Commandes liées":[...new Set(rows.map(r=>r.order).filter(Boolean))].join(" | "),
+        Produits:products.map(r=>`${r.product} (${r.finalSize||"taille manquante"})`).join(" | ")
+      };
+    })
+    .filter(r=>r["Engagement signé"]==="Oui"||r["A acheté équipement"]==="Oui");
+},[fitofan,reconciled]);
+
+const fitofanStatusAuditRows=useMemo(()=>{
+  return (fitofan?.competitors||[]).map(f=>({
+    Compétiteur:f.competitor,
+    Email:f.email,
+    Dojo:f.dojo,
+    Équipe:f.team,
+    FITOFAN:f.fitofanStatus||"",
+    Source:f.manual?"Ajout manuel":"Fichier / Supabase"
+  }));
+},[fitofan]);
 
 const views={dashboard:{title:"Tableau de bord visuel",rows:dashboardFiltered},shopifyUnknownCompetitors:{title:"Shopify absent liste compétiteurs",rows:shopifyUnknownCompetitorRows},notFitofanWithOrders:{title:"Commandes avec FITOFAN = non",rows:notFitofanWithEngagementRows},fitofanStatusAudit:{title:"Audit statut FITOFAN",rows:fitofanStatusAuditRows},engagementManagement:{title:"Gestion liens engagements",rows:engagementManagementFilteredRows},engagementCorrections:{title:"Corrections engagements sauvegardées",rows:engagementCorrectionsRows},sizeValidation:{title:"Validation tailles",rows:sizeValidationRows},supplierFinal:{title:"Export fournisseur final",rows:supplierFinalRows},supplierInternal:{title:"Export interne détaillé",rows:supplierInternalRows},participantsFinal:{title:"Export final participants",rows:finalParticipantsRows},manualParticipants:{title:"Ajouter / gérer participants",rows:manualCompetitors.map(r=>({Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:r.team,Source:r.source||"manuel"}))},manualReconciliation:{title:"Engagements manquants à réconcilier",rows:manualReconciliationRows},manualLinks:{title:"Liens manuels sauvegardés",rows:manualLinksRows},unusualSizes:{title:"Tailles inhabituelles à vérifier",rows:unusualSizeRows},shopifyInitialMissing:{title:"Tailles Shopify manquantes initialement",rows:shopifyInitialMissingRows},missingSizes:{title:"Compétiteurs avec tailles manquantes",rows:competitorsMissingSizes},missingEngagements:{title:"Engagements manquants",rows:correctedMissingEngagementRows},audit:{title:"Contrôle qualité",rows:auditRows},detail:{title:"Détail global Shopify + Supabase",rows:detailRows},fitofan:{title:"Suivi par compétiteur Fitofan",rows:fitofanReport},supplier:{title:"Commande fournisseur",rows:supplierRows},supabase:{title:"Audit réponses Supabase",rows:supabaseAudit},fitofanComments:{title:"Commentaires Fitofan",rows:fitofan.comments}};const tabGroups=[
 {id:"dashboard",label:"Tableau de bord",tabs:["dashboard"]},
@@ -750,7 +817,7 @@ const currentGroup=tabGroups.find(g=>g.tabs.includes(tab))||tabGroups[0];
 const visibleTabKeys=currentGroup.tabs.filter(k=>views[k]);
 function selectGroup(g){const first=g.tabs.find(k=>views[k]);if(first)setTab(first);}
 const current=views[tab];const filteredRows=tab==="dashboard"?dashboardFiltered:applyFilters(current.rows||[]);
-return <div className="app"><header><h1>Réconciliation Sunfuki V32.1</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
+return <div className="app"><header><h1>Réconciliation Sunfuki V32.2</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
         <div className={sourceStateClass(fitofanRaw.length)}>
           <div className="sourceTop">
             <strong>1. Fitofan</strong>
