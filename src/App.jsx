@@ -325,9 +325,13 @@ async function saveShopifyRowsToSupabase(items, sourceFile=""){
   const url=import.meta.env.VITE_SUPABASE_URL;
   const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
   if(!url||!key)throw new Error("Variables Supabase manquantes.");
-  const endpoint=`${url.replace(/\/$/,"")}/rest/v1/shopify_order_items`;
+  const base=`${url.replace(/\/$/,"")}/rest/v1`;
+  const endpoint=`${base}/shopify_order_items`;
+
   const rows=(items||[]).map((r,idx)=>({
-    unique_key:`${normalizeOrder(r.order)}|${r.kind||""}|${r.productKey||r.product||""}|${r.rawProduct||""}|${idx}`,
+    // Clé stable pour éviter les doublons au sein d'un même import.
+    // On garde idx seulement pour distinguer deux lignes réellement identiques dans une même commande.
+    unique_key:`${normalizeOrder(r.order)}|${r.kind||""}|${r.productKey||r.product||""}|${r.rawProduct||""}|${r.shopifySize||""}|${idx}`,
     order_number:normalizeOrder(r.order),
     kind:r.kind||"",
     competitor:r.competitor||"",
@@ -350,19 +354,46 @@ async function saveShopifyRowsToSupabase(items, sourceFile=""){
     source_file:sourceFile||"Import Shopify",
     imported_at:new Date().toISOString()
   })).filter(r=>r.order_number);
+
   if(!rows.length)throw new Error("Aucune ligne Shopify valide à sauvegarder.");
 
-  const res=await fetch(`${endpoint}?on_conflict=unique_key`,{
-    method:"POST",
+  // IMPORTANT V33.6 :
+  // L'import Shopify doit être un remplacement complet, pas un ajout.
+  // Sinon chaque nouveau CSV double les lignes dans Supabase.
+  const del=await fetch(`${endpoint}?id=not.is.null`,{
+    method:"DELETE",
     headers:{
       apikey:key,
       Authorization:`Bearer ${key}`,
       "Content-Type":"application/json",
-      Prefer:"resolution=merge-duplicates,return=minimal"
-    },
-    body:JSON.stringify(rows)
+      Prefer:"return=minimal"
+    }
   });
-  if(!res.ok){const text=await res.text();throw new Error(`Erreur sauvegarde Shopify Supabase ${res.status}: ${text}`);}
+  if(!del.ok){
+    const text=await del.text();
+    throw new Error(`Erreur purge Shopify Supabase ${del.status}: ${text}`);
+  }
+
+  // Insertion par lots pour éviter une requête trop lourde.
+  const batchSize=500;
+  for(let i=0;i<rows.length;i+=batchSize){
+    const batch=rows.slice(i,i+batchSize);
+    const res=await fetch(endpoint,{
+      method:"POST",
+      headers:{
+        apikey:key,
+        Authorization:`Bearer ${key}`,
+        "Content-Type":"application/json",
+        Prefer:"return=minimal"
+      },
+      body:JSON.stringify(batch)
+    });
+    if(!res.ok){
+      const text=await res.text();
+      throw new Error(`Erreur sauvegarde Shopify Supabase ${res.status}: ${text}`);
+    }
+  }
+
   return rows.length;
 }
 
@@ -746,7 +777,7 @@ async function saveShopifyCloud(){
   setShopifyCloudStatus("Sauvegarde Shopify dans Supabase...");
   try{
     const count=await saveShopifyRowsToSupabase(shopify,files.shopify||"Import Shopify");
-    setShopifyCloudStatus(`Shopify sauvegardé dans Supabase : ${count} lignes ajoutées/mises à jour`);
+    setShopifyCloudStatus(`Shopify sauvegardé dans Supabase : ancien import remplacé par ${count} lignes`);
   }catch(e){
     setShopifyCloudStatus(e.message||"Erreur sauvegarde Shopify");
   }
