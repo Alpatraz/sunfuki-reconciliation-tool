@@ -98,8 +98,8 @@ function findShopifySizeRaw(row,rawProduct,productKey){
  return pick(row,["Taille","Size","Variant","Option","Correction taille"]);
 }
 
-function parseShopify(rows){const out=[];for(const row of rows){const order=normalizeOrder(pick(row,["Commande","Order","Name","orderName","Order name","Numéro"]));const statusRaw=pick(row,["Statut commande","Status","Financial status","Fulfillment status","Statut"]);const client=pick(row,["Client","Customer","Nom client"]);const competitor=pick(row,["Compétiteur","Competitor","Athlete","Nom compétiteur","Nom du compétiteur"])||client;const email=pick(row,["Courriel compétiteur","Email","Courriel","Customer email","recipient_email"]);const dojo=pick(row,["Dojo","École","Ecole","Location"]);const team=pick(row,["Équipe","Equipe","Team"]);const rawProduct=pick(row,["Produit","Product","Line item name","Title","Item"]);const qty=Number((pick(row,["Quantité","Quantity","Qty"])||"1").replace(",","."))||1;const refunded=Number((pick(row,["Qté remboursée","Qte remboursee","Refunded quantity","quantityRefunded"])||"0").replace(",","."))||0;const er=pick(row,["Qté effective","Qte effective","Effective quantity"]);let effectiveQty=er===""?Math.max(0,qty-refunded):Number(er.replace(",","."));if(Number.isNaN(effectiveQty))effectiveQty=Math.max(0,qty-refunded);const prod=supplierProductKey(rawProduct);if(!rawProduct)continue;const cancelled=norm(statusRaw).includes("annul")||norm(statusRaw).includes("rembours");const excluded=cancelled||effectiveQty<=0;if(prod==="engagement"){out.push({kind:"engagement",order,competitor,ckey:competitorKey(competitor),client,email,dojo,team,rawProduct,productKey:prod,product:supplierProductName(rawProduct,prod),shopifySize:"",quantity:qty,refunded,effectiveQty,excluded:true,statusRaw,status:"ENGAGEMENT",comments:""});continue;}const explicitSize=pick(row,["Taille","Size","Variant","Option","Correction taille"]);const shopifySize=hasSize(prod)?extractSize(explicitSize):"Taille unique";let shopifySizeRaw=findShopifySizeRaw(row,rawProduct,prod);const shopifySizeAnalysis=analyzeSize(shopifySizeRaw||shopifySize,"Shopify");out.push({kind:"product",order,competitor,ckey:competitorKey(competitor),client,email,dojo,team,rawProduct,productKey:prod,product:supplierProductName(rawProduct,prod),shopifySizeRaw,shopifySize,shopifySizeStatus:shopifySizeAnalysis.status,quantity:qty,refunded,effectiveQty,excluded,statusRaw,status:excluded?"ANNULÉ / REMBOURSÉ - exclu fournisseur":"",comments:""});}return out;}
-function parseSupabase(rows){const out=[];for(const row of rows){const orderRaw=pick(row,["order_number","Commande","Order","orderName","Numéro"]);const orders=splitOrders(orderRaw);const competitor=pick(row,["competitor","Compétiteur","Client","Nom","customerName"]);const email=pick(row,["recipient_email","Email","Courriel","customer_email"]);const rawProduct=pick(row,["product_name","Produit","product","Article","item","Nom produit"]);const sizeRaw=pick(row,["confirmed_size","Taille","size","Nouvelle taille","Réponse"]);const size=normalizeLooseSize(sizeRaw);const sizeAnalysis=analyzeSize(sizeRaw,"Supabase");const comments=pick(row,["comments","Commentaire","comment","Notes","Message","Réponse","response"]);const prod=supplierProductKey(rawProduct);const kind=prod==="engagement"?"engagement":(prod==="unknown"?"comment":"product");const base={kind,orderRaw:normalizeOrder(orderRaw),competitor,ckey:competitorKey(competitor),email,rawProduct,productKey:prod,product:supplierProductName(rawProduct,prod),sizeRaw,size,sizeStatus:sizeAnalysis.status,comments};if(orders.length)orders.forEach(order=>out.push({...base,order}));else out.push({...base,order:""});}return out;}
+function parseShopify(rows){const out=[];for(const row of rows){const order=normalizeOrder(pick(row,["Commande","Order","Name","orderName","Order name","Numéro"]));const statusRaw=pick(row,["Statut commande","Status","Financial status","Fulfillment status","Statut"]);const client=pick(row,["Client","Customer","Nom client"]);const competitor=pick(row,["Compétiteur","Competitor","Athlete","Nom compétiteur","Nom du compétiteur"])||client;const email=pick(row,["Courriel compétiteur","Email","Courriel","Customer email","recipient_email"]);const dojo=pick(row,["Dojo","École","Ecole","Location"]);const team=pick(row,["Équipe","Equipe","Team"]);const rawProduct=pick(row,["Produit","Product","Line item name","Title","Item"]);const qty=Number((pick(row,["Quantité","Quantity","Qty"])||"1").replace(",","."))||1;const refunded=Number((pick(row,["Qté remboursée","Qte remboursee","Refunded quantity","quantityRefunded"])||"0").replace(",","."))||0;const er=pick(row,["Qté effective","Qte effective","Effective quantity"]);let effectiveQty=er===""?Math.max(0,qty-refunded):Number(er.replace(",","."));if(Number.isNaN(effectiveQty))effectiveQty=Math.max(0,qty-refunded);const prod=supplierProductKey(rawProduct);if(!rawProduct)continue;const cancelled=norm(statusRaw).includes("annul")||norm(statusRaw).includes("rembours");const excluded=cancelled||effectiveQty<=0;if(prod==="engagement"){out.push({kind:"engagement",order,competitor,ckey:competitorKey(competitor),client,email,dojo,team,rawProduct,productKey:prod,rowIndex:idx,uniqueKey:`${normalizeOrder(order)}|${kind}|${prod}|${rawProduct}|${idx}`,product:supplierProductName(rawProduct,prod),shopifySize:"",quantity:qty,refunded,effectiveQty,excluded:true,statusRaw,status:"ENGAGEMENT",comments:""});continue;}const explicitSize=pick(row,["Taille","Size","Variant","Option","Correction taille"]);const shopifySize=hasSize(prod)?extractSize(explicitSize):"Taille unique";let shopifySizeRaw=findShopifySizeRaw(row,rawProduct,prod);const shopifySizeAnalysis=analyzeSize(shopifySizeRaw||shopifySize,"Shopify");out.push({kind:"product",order,competitor,ckey:competitorKey(competitor),client,email,dojo,team,rawProduct,productKey:prod,rowIndex:idx,uniqueKey:`${normalizeOrder(order)}|${kind}|${prod}|${rawProduct}|${idx}`,product:supplierProductName(rawProduct,prod),shopifySizeRaw,shopifySize,shopifySizeStatus:shopifySizeAnalysis.status,quantity:qty,refunded,effectiveQty,excluded,statusRaw,status:excluded?"ANNULÉ / REMBOURSÉ - exclu fournisseur":"",comments:""});}return out;}
+function parseSupabase(rows){const out=[];for(const row of rows){const orderRaw=pick(row,["order_number","Commande","Order","orderName","Numéro"]);const orders=splitOrders(orderRaw);const competitor=pick(row,["competitor","Compétiteur","Client","Nom","customerName"]);const email=pick(row,["recipient_email","Email","Courriel","customer_email"]);const rawProduct=pick(row,["product_name","Produit","product","Article","item","Nom produit"]);const sizeRaw=pick(row,["confirmed_size","Taille","size","Nouvelle taille","Réponse"]);const size=normalizeLooseSize(sizeRaw);const sizeAnalysis=analyzeSize(sizeRaw,"Supabase");const comments=pick(row,["comments","Commentaire","comment","Notes","Message","Réponse","response"]);const prod=supplierProductKey(rawProduct);const kind=prod==="engagement"?"engagement":(prod==="unknown"?"comment":"product");const base={kind,orderRaw:normalizeOrder(orderRaw),competitor,ckey:competitorKey(competitor),email,rawProduct,productKey:prod,rowIndex:idx,uniqueKey:`${normalizeOrder(order)}|${kind}|${prod}|${rawProduct}|${idx}`,product:supplierProductName(rawProduct,prod),sizeRaw,size,sizeStatus:sizeAnalysis.status,comments};if(orders.length)orders.forEach(order=>out.push({...base,order}));else out.push({...base,order:""});}return out;}
 async function loadSupabaseResponses(){const url=import.meta.env.VITE_SUPABASE_URL;const key=import.meta.env.VITE_SUPABASE_ANON_KEY;if(!url||!key)throw new Error("Variables Supabase manquantes : VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY.");const endpoint=`${url.replace(/\/$/,"")}/rest/v1/responses?select=*&order=created_at.desc`;const res=await fetch(endpoint,{headers:{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json"}});if(!res.ok)throw new Error(`Erreur Supabase ${res.status}: ${await res.text()}`);return await res.json();}
 
 
@@ -165,8 +165,7 @@ async function saveFitofanRowsToSupabase(rows, sourceFile = "") {
     dojo: r.dojo,
     team: r.team,
     source_file: sourceFile || "Import Fitofan",
-    fitofan_status: r.fitofanStatus || "",
-  }));
+    fitofan_status: r.fitofanStatus || ""}));
 
   if (!parsed.length) throw new Error("Aucun compétiteur Fitofan valide à sauvegarder.");
 
@@ -179,9 +178,7 @@ async function saveFitofanRowsToSupabase(rows, sourceFile = "") {
       apikey: key,
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-  });
+      Prefer: "return=minimal"}});
   if (!del.ok) {
     const text = await del.text();
     throw new Error(`Erreur suppression Fitofan Supabase ${del.status}: ${text}`);
@@ -193,10 +190,8 @@ async function saveFitofanRowsToSupabase(rows, sourceFile = "") {
       apikey: key,
       Authorization: `Bearer ${key}`,
       "Content-Type": "application/json",
-      Prefer: "return=minimal",
-    },
-    body: JSON.stringify(parsed),
-  });
+      Prefer: "return=minimal"},
+    body: JSON.stringify(parsed)});
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Erreur sauvegarde Fitofan Supabase ${res.status}: ${text}`);
@@ -215,9 +210,7 @@ async function loadFitofanRowsFromSupabase() {
     headers: {
       apikey: key,
       Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-  });
+      "Content-Type": "application/json"}});
   if (!res.ok) {
     const text = await res.text();
     throw new Error(`Erreur chargement Fitofan Supabase ${res.status}: ${text}`);
@@ -231,8 +224,7 @@ async function loadFitofanRowsFromSupabase() {
     Email: r.email || "",
     Dojo: r.dojo || "",
     Equipe: r.team || "",
-    FITOFAN: r.fitofan_status || "",
-  }));
+    FITOFAN: r.fitofan_status || ""}));
 }
 
 
@@ -321,16 +313,12 @@ async function deleteEngagementLinkCorrectionFromSupabase(id){
 function engagementCorrectionKey(order,competitor,team){return `${normalizeOrder(order)}|${competitorKey(competitor)}|${canonicalTeamKey(team)}`;}
 
 
-async function saveShopifyRowsToSupabase(items, sourceFile=""){
+async function saveShopifyRowsToSupabase(items,sourceFile=""){
   const url=import.meta.env.VITE_SUPABASE_URL;
   const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
   if(!url||!key)throw new Error("Variables Supabase manquantes.");
-  const base=`${url.replace(/\/$/,"")}/rest/v1`;
-  const endpoint=`${base}/shopify_order_items`;
-
+  const endpoint=`${url.replace(/\/$/,"")}/rest/v1/shopify_order_items`;
   const rows=(items||[]).map((r,idx)=>({
-    // Clé stable pour éviter les doublons au sein d'un même import.
-    // On garde idx seulement pour distinguer deux lignes réellement identiques dans une même commande.
     unique_key:`${normalizeOrder(r.order)}|${r.kind||""}|${r.productKey||r.product||""}|${r.rawProduct||""}|${r.shopifySize||""}|${idx}`,
     order_number:normalizeOrder(r.order),
     kind:r.kind||"",
@@ -354,38 +342,23 @@ async function saveShopifyRowsToSupabase(items, sourceFile=""){
     source_file:sourceFile||"Import Shopify",
     imported_at:new Date().toISOString()
   })).filter(r=>r.order_number);
-
   if(!rows.length)throw new Error("Aucune ligne Shopify valide à sauvegarder.");
 
-  // IMPORTANT V33.6 :
-  // L'import Shopify doit être un remplacement complet, pas un ajout.
-  // Sinon chaque nouveau CSV double les lignes dans Supabase.
   const del=await fetch(`${endpoint}?id=not.is.null`,{
     method:"DELETE",
-    headers:{
-      apikey:key,
-      Authorization:`Bearer ${key}`,
-      "Content-Type":"application/json",
-      Prefer:"return=minimal"
-    }
+    headers:{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json",Prefer:"return=minimal"}
   });
   if(!del.ok){
     const text=await del.text();
     throw new Error(`Erreur purge Shopify Supabase ${del.status}: ${text}`);
   }
 
-  // Insertion par lots pour éviter une requête trop lourde.
   const batchSize=500;
   for(let i=0;i<rows.length;i+=batchSize){
     const batch=rows.slice(i,i+batchSize);
     const res=await fetch(endpoint,{
       method:"POST",
-      headers:{
-        apikey:key,
-        Authorization:`Bearer ${key}`,
-        "Content-Type":"application/json",
-        Prefer:"return=minimal"
-      },
+      headers:{apikey:key,Authorization:`Bearer ${key}`,"Content-Type":"application/json",Prefer:"return=minimal"},
       body:JSON.stringify(batch)
     });
     if(!res.ok){
@@ -393,7 +366,6 @@ async function saveShopifyRowsToSupabase(items, sourceFile=""){
       throw new Error(`Erreur sauvegarde Shopify Supabase ${res.status}: ${text}`);
     }
   }
-
   return rows.length;
 }
 
@@ -431,7 +403,7 @@ async function loadShopifyRowsFromSupabase(){
 
   return (all||[]).map(r=>({
     kind:r.kind||"",
-    order:r.order_number||"",
+    order:r.order_number||"",uniqueKey:r.unique_key||"",
     competitor:r.competitor||"",
     email:r.email||"",
     dojo:r.dojo||"",
@@ -507,8 +479,7 @@ function buildResolvedEngagementState({ fitofan, reconciled, engagementCorrectio
       Équipe: f.team,
       Email: f.email || "",
       Engagement: "MANQUANT",
-      "Action suggérée": "Gestion liens engagements",
-    }));
+      "Action suggérée": "Gestion liens engagements"}));
 
   const managementRows = [];
   fitofanRows.forEach((f) => {
@@ -524,8 +495,7 @@ function buildResolvedEngagementState({ fitofan, reconciled, engagementCorrectio
           Commande: e.order,
           "Nom Shopify": e.manualOriginalCompetitor || e.competitor || "",
           Statut: "LIÉ",
-          Action: "Délier",
-        });
+          Action: "Délier"});
       });
     } else {
       managementRows.push({
@@ -535,16 +505,14 @@ function buildResolvedEngagementState({ fitofan, reconciled, engagementCorrectio
         Commande: "",
         "Nom Shopify": "",
         Statut: "AUCUN ENGAGEMENT LIÉ",
-        Action: "Lier",
-      });
+        Action: "Lier"});
     }
   });
 
   return {
     missing,
     managementRows,
-    engagementByCompetitorTeam,
-  };
+    engagementByCompetitorTeam};
 }
 
 
@@ -555,7 +523,7 @@ function stripProductNoise(raw=""){
   s=s.replace(/\s+acompte\s*50\s*%/gi,"");
   s=s.replace(/\s+50\s*%/gi,"");
   s=s.replace(/\s+[-–—]\s*$/g,"");
-  s=s.replace(/\s{2,}/g," ").trim();
+  s=s.replace(/\s{2}/g," ").trim();
   return s;
 }
 function supplierProductName(raw="", fallback=""){
@@ -729,6 +697,23 @@ function teamCategoryOptions(){
   return ["Cobra","Cobra International","Coach","Assistant-Coach","Propriétaire","Karaté Sunfuki"];
 }
 
+
+function sizeOverrideProductKey(item={}){
+  const order=normalizeOrder(item.order||item.order_number||item.Commande||"");
+  const productKey=clean(item.productKey||item.product_key||item.Produit||item.product||"");
+  const raw=clean(item.rawProduct||item.raw_product||item["Produit Shopify brut"]||"");
+  const unique=clean(item.uniqueKey||item.unique_key||"");
+  const line=item.lineIndex ?? item.line_index ?? item.rowIndex ?? item.row_index ?? item.itemIndex ?? "";
+  if(unique)return `line:${unique}`;
+  return `line:${order}|${productKey}|${raw}|${line}`;
+}
+function sizeOverrideLookupKeys(item={}){
+  const order=normalizeOrder(item.order||item.order_number||item.Commande||"");
+  const productKey=clean(item.productKey||item.product_key||item.Produit||item.product||"");
+  const lineKey=sizeOverrideProductKey(item);
+  return [lineKey,productKey].filter(Boolean).map(k=>`${order}|${k}`);
+}
+
 export default function App(){const [shopifyCloudStatus,setShopifyCloudStatus]=useState("");const [shopifyCloudRows,setShopifyCloudRows]=useState([]);const [manualCompetitors,setManualCompetitors]=useState([]);const [manualSizes,setManualSizes]=useState([]);const [manualParticipantStatus,setManualParticipantStatus]=useState("");const [newParticipant,setNewParticipant]=useState({competitor:"",email:"",dojo:"",team:""});const [manualSizeInputs,setManualSizeInputs]=useState({});const [orderSizeEditSearch,setOrderSizeEditSearch]=useState("");const [commentSizeReviewSearch,setCommentSizeReviewSearch]=useState("");const [savedSizeKeys,setSavedSizeKeys]=useState(new Set());const [engagementCorrections,setEngagementCorrections]=useState([]);const [engagementCorrectionStatus,setEngagementCorrectionStatus]=useState("");const [engagementLinkInputs,setEngagementLinkInputs]=useState({});const [engagementSearch,setEngagementSearch]=useState("");const [engagementStatusFilter,setEngagementStatusFilter]=useState("all");const [fitofanCloudStatus,setFitofanCloudStatus]=useState("");const[manualLinks,setManualLinks]=useState([]);const[manualLinkStatus,setManualLinkStatus]=useState("");const[manualSelections,setManualSelections]=useState({});const[fitofanRaw,setFitofanRaw]=useState([]);const[shopifyRaw,setShopifyRaw]=useState([]);const[supabaseRaw,setSupabaseRaw]=useState([]);const[files,setFiles]=useState({});const[tab,setTab]=useState("dashboard");const[search,setSearch]=useState("");const[filters,setFilters]=useState({dojo:"",team:"",product:"",competitor:""});const[supabaseStatus,setSupabaseStatus]=useState("");useEffect(()=>{try{const saved=localStorage.getItem(STORAGE_FITOFAN);const savedFile=localStorage.getItem(STORAGE_FITOFAN_FILE);if(saved)setFitofanRaw(JSON.parse(saved));if(savedFile)setFiles(p=>({...p,fitofan:savedFile}));}catch(e){console.warn(e)}},[]);useEffect(()=>{refreshManualLinks();refreshEngagementCorrections();refreshManualCompetitors();refreshManualSizes();},[]);
 async function upload(type,file){if(!file)return;const rows=await readFileRows(file);setFiles(p=>({...p,[type]:`${file.name} (${rows.length} lignes)`}));if(type==="fitofan"){setFitofanRaw(rows);localStorage.setItem(STORAGE_FITOFAN,JSON.stringify(rows));localStorage.setItem(STORAGE_FITOFAN_FILE,`${file.name} (${rows.length} lignes)`);}if(type==="shopify")setSavedSizeKeys(new Set());setShopifyCloudRows([]);setShopifyRaw(rows);if(type==="supabase")setSupabaseRaw(rows);}function resetFitofan(){localStorage.removeItem(STORAGE_FITOFAN);localStorage.removeItem(STORAGE_FITOFAN_FILE);setFitofanRaw([]);setFiles(p=>({...p,fitofan:""}));}
   async function saveFitofanCloud() {
@@ -782,32 +767,32 @@ async function addManualParticipant(){
     setManualParticipantStatus("Participant ajouté.");
   }catch(e){setManualParticipantStatus(e.message||"Erreur ajout participant");}
 }
-async function saveManualSize(order,productKey,competitor,rawProduct){
+async function saveManualSize(order,productKey,competitor,rawProduct,itemOverride=null){
+  const item=itemOverride||{order,productKey,competitor,rawProduct};
   const normalizedOrder=normalizeOrder(order);
-  const k=`${normalizedOrder}|${productKey}`;
-  const value=manualSizeInputs[k] ?? manualSizeInputs[`${order}|${productKey}`] ?? "";
+  const lineProductKey=sizeOverrideProductKey(item);
+  const legacyKey=`${normalizedOrder}|${productKey}`;
+  const lineKey=`${normalizedOrder}|${lineProductKey}`;
+  const value=manualSizeInputs[lineKey] ?? manualSizeInputs[legacyKey] ?? "";
   setManualParticipantStatus("Sauvegarde taille manuelle...");
   try{
     if(!clean(value))throw new Error("Taille requise.");
     const normalized=normalizeLooseSize(value);
-    const payload={order_number:normalizedOrder,product_key:productKey,competitor:competitor||"",raw_product:rawProduct||"",size_raw:value,size_normalized:normalized,source:"manuel"};
+    const payload={order_number:normalizedOrder,product_key:lineProductKey,competitor:competitor||"",raw_product:rawProduct||"",size_raw:value,size_normalized:normalized,source:"manuel"};
     const saved=await saveManualSizeToSupabase(payload);
     const savedRow=Array.isArray(saved)&&saved[0]?saved[0]:payload;
 
-    // Mise à jour immédiate de l'état local : la taille disparaît tout de suite des manquants.
     setManualSizes(prev=>{
-      const key=`${normalizedOrder}|${productKey}`;
-      const without=(prev||[]).filter(s=>`${normalizeOrder(s.order_number)}|${s.product_key}`!==key);
+      const without=(prev||[]).filter(s=>`${normalizeOrder(s.order_number)}|${s.product_key}`!==lineKey);
       return [savedRow,...without];
     });
-    setSavedSizeKeys(prev=>{const next=new Set(prev);next.add(`${normalizedOrder}|${productKey}`);return next;});
-
-    setManualSizeInputs(p=>({...p,[k]:"",[`${order}|${productKey}`]:""}));
+    setSavedSizeKeys(prev=>{const next=new Set(prev);next.add(lineKey);return next;});
+    setManualSizeInputs(p=>({...p,[lineKey]:"",[legacyKey]:""}));
     await refreshManualSizes();
     setManualParticipantStatus(`Taille sauvegardée : ${normalized}`);
   }catch(e){
     setManualParticipantStatus(e.message||"Erreur sauvegarde taille");
-    console.error("Erreur sauvegarde taille", e);
+    console.error("Erreur sauvegarde taille",e);
   }
 }
 
@@ -862,9 +847,9 @@ const resolvedEngagementState=useMemo(()=>buildResolvedEngagementState({fitofan,
 const engagementManagementRows=resolvedEngagementState.managementRows;
 const correctedMissingEngagementRows=resolvedEngagementState.missing;
 const engagementManagementFilteredRows=useMemo(()=>{const q=norm(engagementSearch);return engagementManagementRows.filter(r=>{const txt=norm(`${r.Compétiteur} ${r.Dojo} ${r.Équipe} ${r.Commande} ${r["Nom Shopify"]} ${r.Statut}`);const okSearch=!q||txt.includes(q);const okStatus=engagementStatusFilter==="all"||(engagementStatusFilter==="linked"&&r.Statut==="LIÉ")||(engagementStatusFilter==="missing"&&r.Statut!=="LIÉ");return okSearch&&okStatus;});},[engagementManagementRows,engagementSearch,engagementStatusFilter]);
-const fitofanReport=useMemo(()=>fitofan.competitors.map(f=>{const rows=reconciled.filter(r=>r.ckey===f.key);const products=rows.filter(r=>r.kind==="product"&&!r.excluded);const engagementKey=`${f.key}|${canonicalTeamKey(f.team)}`;const engagements=resolvedEngagementState.engagementByCompetitorTeam.get(engagementKey)||[];const orders=[...new Set([...rows.map(r=>r.order).filter(Boolean),...engagements.map(e=>e.order).filter(Boolean)])];return{Compétiteur:f.competitor,Email:f.email,Dojo:f.dojo,Équipe:displayTeamCategory(f.team),FITOFAN:f.fitofanStatus||"","Inscrit Fitofan":"Oui","Engagement signé":engagements.length?"Oui":"Non","Commandes liées":orders.join(" | "),"A acheté équipement":products.length?"Oui":"Non","Produits commandés":products.map(r=>`${r.product} (${r.finalSize||"taille manquante"})`).join(" | "),"Tailles Shopify":products.map(r=>`${r.order} - ${r.product}: ${r.shopifySize||"vide"}`).join(" | "),"Tailles Supabase":products.map(r=>`${r.order} - ${r.product}: ${r.supabaseSize||"aucune"}`).join(" | "),"Tailles finales":products.map(r=>`${r.order} - ${r.product}: ${r.finalSize||"taille manquante"} (${r.sourceSize||"aucune source"})`).join(" | "),"Tailles manquantes":products.filter(r=>r.missing).length,Commentaires:[...new Set(rows.map(r=>r.comments).filter(Boolean))].join(" | ")};}),[fitofan,reconciled,resolvedEngagementState]);
+const fitofanReport=useMemo(()=>fitofan.competitors.map(f=>{const rows=reconciled.filter(r=>r.ckey===f.key);const products=rows.filter(r=>r.kind==="product"&&!r.excluded);const engagementKey=`${f.key}|${canonicalTeamKey(f.team)}`;const engagements=resolvedEngagementState.engagementByCompetitorTeam.get(engagementKey)||[];const orders=[...new Set([...rows.map(r=>r.order).filter(Boolean),...engagements.map(e=>e.order).filter(Boolean)])];return{Compétiteur:f.competitor,Email:f.email,Dojo:f.dojo,Équipe:displayTeamCategory(f.team),FITOFAN:f.fitofanStatus||"","Engagement signé":engagements.length?"Oui":"Non","Commandes liées":orders.join(" | "),"A acheté équipement":products.length?"Oui":"Non","Produits commandés":products.map(r=>`${r.product} (${r.finalSize||"taille manquante"})`).join(" | "),"Tailles Shopify":products.map(r=>`${r.order} - ${r.product}: ${r.shopifySize||"vide"}`).join(" | "),"Tailles Supabase":products.map(r=>`${r.order} - ${r.product}: ${r.supabaseSize||"aucune"}`).join(" | "),"Tailles finales":products.map(r=>`${r.order} - ${r.product}: ${r.finalSize||"taille manquante"} (${r.sourceSize||"aucune source"})`).join(" | "),"Tailles manquantes":products.filter(r=>r.missing).length,Commentaires:[...new Set(rows.map(r=>r.comments).filter(Boolean))].join(" | ")};}),[fitofan,reconciled,resolvedEngagementState]);
 const supabaseLinkedKeys=new Set(reconciled.filter(r=>r.supabaseSize).map(r=>productKey(r.order,r.productKey)));const supabaseAudit=supabase.map(s=>({Commande:s.order,Compétiteur:s.competitor,Produit:s.rawProduct,"Produit normalisé":s.productKey,Taille:s.size,Commentaire:s.comments,Type:s.kind,Statut:s.kind==="product"&&s.size?(supabaseLinkedKeys.has(productKey(s.order,s.productKey))?"Reliée":"NON RELIÉE"):"Commentaire / engagement conservé"}));
-const auditRows=[{Indicateur:"Lignes Fitofan compétiteurs",Valeur:fitofan.competitors.length},{Indicateur:"Fitofan source",Valeur:files.fitofan||"Non chargé"},{Indicateur:"Commentaires Fitofan exclus",Valeur:fitofan.comments.length},{Indicateur:"Lignes Shopify produits/engagements",Valeur:shopify.length},{Indicateur:"Articles actifs analysés",Valeur:reconciled.filter(r=>r.kind==="product"&&!r.excluded).reduce((s,r)=>s+r.effectiveQty,0)},{Indicateur:"Articles exclus annulés/remboursés",Valeur:reconciled.filter(r=>r.kind==="product"&&r.excluded).length},{Indicateur:"Tailles Supabase appliquées",Valeur:reconciled.filter(r=>r.supabaseSize).length},{Indicateur:"Tailles manquantes",Valeur:reconciled.filter(r=>r.missing).length},{Indicateur:"Réponses Supabase total",Valeur:supabase.length},{Indicateur:"Réponses Supabase produits non reliées",Valeur:supabaseAudit.filter(r=>r.Statut==="NON RELIÉE").length},{Indicateur:"Total produits fournisseur",Valeur:supplierRows.reduce((s,r)=>s+r.Quantité,0)}];
+const auditRows=[{Indicateur:"Lignes Fitofan compétiteurs",Valeur:fitofan.competitors.length},{Indicateur:"Colonne Inscrit Fitofan supprimée",Valeur:"Oui - utiliser FITOFAN"},{Indicateur:"Fitofan source",Valeur:files.fitofan||"Non chargé"},{Indicateur:"Commentaires Fitofan exclus",Valeur:fitofan.comments.length},{Indicateur:"Lignes Shopify produits/engagements",Valeur:shopify.length},{Indicateur:"Articles actifs analysés",Valeur:reconciled.filter(r=>r.kind==="product"&&!r.excluded).reduce((s,r)=>s+r.effectiveQty,0)},{Indicateur:"Articles exclus annulés/remboursés",Valeur:reconciled.filter(r=>r.kind==="product"&&r.excluded).length},{Indicateur:"Tailles Supabase appliquées",Valeur:reconciled.filter(r=>r.supabaseSize).length},{Indicateur:"Tailles manquantes",Valeur:reconciled.filter(r=>r.missing).length},{Indicateur:"Réponses Supabase total",Valeur:supabase.length},{Indicateur:"Réponses Supabase produits non reliées",Valeur:supabaseAudit.filter(r=>r.Statut==="NON RELIÉE").length},{Indicateur:"Total produits fournisseur",Valeur:supplierRows.reduce((s,r)=>s+r.Quantité,0)}];
 const dashboardRows=detailRows.filter(r=>r.Type==="product"&&r["Exclu fournisseur"]!=="Oui");const filterOptions={dojo:uniqueSorted([...dashboardRows.map(r=>r.Dojo),...fitofanReport.map(r=>r.Dojo)]),team:uniqueSorted([...dashboardRows.map(r=>r.Équipe),...fitofanReport.map(r=>r.Équipe)]),product:uniqueSorted(dashboardRows.map(r=>r.Produit)),competitor:uniqueSorted([...dashboardRows.map(r=>r.Compétiteur),...fitofanReport.map(r=>r.Compétiteur)])};function applyFilters(rows){return rows.filter(row=>{const text=norm(Object.values(row).join(" "));if(search&&!text.includes(norm(search)))return false;if(filters.dojo&&norm(row.Dojo)!==norm(filters.dojo))return false;if(filters.team&&norm(row.Équipe)!==norm(filters.team))return false;if(filters.product&&!norm(Object.values(row).join(" ")).includes(norm(filters.product)))return false;if(filters.competitor&&norm(row.Compétiteur)!==norm(filters.competitor))return false;return true;});}
 const dashboardFiltered=applyFilters(dashboardRows);const dashboardStats={competitors:uniqueSorted(dashboardFiltered.map(r=>r.Compétiteur)).length,quantity:dashboardFiltered.reduce((s,r)=>s+(Number(r["Qté effective"])||0),0),missing:dashboardFiltered.filter(r=>r.Statut.includes("TAILLE MANQUANTE")).length,supabase:dashboardFiltered.filter(r=>r["Source taille"]==="Supabase").length,initialMissing:shopifyInitialMissingRows.length,regularized:shopifyInitialMissingRows.filter(r=>r["Statut régularisation"]==="RÉGULARISÉ PAR SUPABASE").length,unusual:unusualSizeRows.length};const competitorsMissingSizes=useMemo(()=>{const map=new Map();dashboardRows.filter(r=>String(r.Statut||"").includes("TAILLE MANQUANTE")).forEach(r=>{const name=r.Compétiteur||"Compétiteur non précisé";const current=map.get(name)||{Compétiteur:name,Dojo:r.Dojo||"",Équipe:r.Équipe||"",Commandes:new Set(),Produits:[]};if(r.Commande)current.Commandes.add(r.Commande);current.Produits.push(`${r.Produit||""} (${r.Commande||""})`);map.set(name,current);});return Array.from(map.values()).map(r=>({Compétiteur:r.Compétiteur,Dojo:r.Dojo,Équipe:r.Équipe,Commandes:Array.from(r.Commandes).join(" | "),"Produits sans taille":r.Produits.join(" | ")}));},[dashboardRows]);const competitorsMissingEngagement=useMemo(()=>fitofanReport.filter(r=>r["Inscrit Fitofan"]==="Oui"&&r["Engagement signé"]!=="Oui").map(r=>({Compétiteur:r.Compétiteur,Dojo:r.Dojo,Équipe:r.Équipe,Email:r.Email,"Commandes liées":r["Commandes liées"],"A acheté équipement":r["A acheté équipement"]})),[fitofanReport]);const linkedOrdersSet=useMemo(()=>new Set(manualLinks.map(l=>l.order_number)),[manualLinks]);
 const manualReconciliationRows=useMemo(()=>{
@@ -968,7 +953,7 @@ const fitofanStatusAuditRows=useMemo(()=>{
   }));
 },[fitofan]);
 
-const visibleSizeValidationRows=useMemo(()=>sizeValidationRows.filter(r=>!savedSizeKeys.has(`${normalizeOrder(r.order)}|${r.productKey}`)),[sizeValidationRows,savedSizeKeys]);
+const visibleSizeValidationRows=useMemo(()=>sizeValidationRows.filter(r=>!savedSizeKeys.has(`${normalizeOrder(r.order)}|${sizeOverrideProductKey(r)}`)),[sizeValidationRows,savedSizeKeys]);
 const orderSizeEditRows=useMemo(()=>{
   return (reconciled||[])
     .filter(r=>r.kind==="product"&&!r.excluded&&hasSize(r.productKey))
@@ -1096,7 +1081,7 @@ const currentGroup=tabGroups.find(g=>g.tabs.includes(tab))||tabGroups[0];
 const visibleTabKeys=currentGroup.tabs.filter(k=>views[k]);
 function selectGroup(g){const first=g.tabs.find(k=>views[k]);if(first)setTab(first);}
 const current=views[tab];const filteredRows=tab==="dashboard"?dashboardFiltered:applyFilters(current.rows||[]);
-return <div className="app"><header><h1>Réconciliation Sunfuki V33.9</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
+return <div className="app"><header><h1>Réconciliation Sunfuki V33.11</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
         <div className={sourceStateClass(fitofanRaw.length)}>
           <div className="sourceTop">
             <strong>1. Fitofan</strong>
@@ -1151,7 +1136,7 @@ return <div className="app"><header><h1>Réconciliation Sunfuki V33.9</h1><p>Sou
               </div>
               <button onClick={() => setTab("missingEngagements")}>Voir la liste</button>
             </div>
-          </section></>}<nav className="groupedNavPanel"><div className="navGroups">{tabGroups.map(g=><button key={g.id} className={currentGroup.id===g.id?"active":""} onClick={()=>selectGroup(g)}>{g.label}</button>)}</div><div className="cleanTabButtons">{visibleTabKeys.map(id=><button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{views[id].title}</button>)}</div></nav><section className="toolbar"><button onClick={()=>exportCsv(`${current.title||tab}.csv`,filteredRows)} disabled={!filteredRows.length}>Exporter ce rapport CSV</button><button onClick={()=>exportCsv(`club-${filters.dojo||"tous"}-${filters.team||"toutes-equipes"}-${current.title||tab}.csv`,filteredRows)} disabled={!filteredRows.length}>Export club / dojo du rapport affiché</button></section>{tab==="manualReconciliation"&&<section className="manualLinkPanel"><h2>Réconcilier les engagements manquants</h2><p>Choisis un compétiteur Fitofan sans engagement, puis associe uniquement une commande Shopify de type engagement.</p>{manualReconciliationRows.map(r=><div className="manualLinkRow" key={r.Compétiteur}><div><strong>{r.Compétiteur}</strong><span>{r.Dojo} — {r.Équipe} · Suggestion : {r["Meilleure suggestion"]||"aucune"} {r["Nom Shopify suggéré"]?`(${r["Nom Shopify suggéré"]})`:""}</span></div><select value={manualSelections[`${r.Compétiteur}|${r.Équipe}`]||r["Meilleure suggestion"]||""} onChange={e=>setManualSelections(p=>({...p,[`${r.Compétiteur}|${r.Équipe}`]:e.target.value}))}><option value="">Choisir une commande d’engagement</option>{engagementOrders.map(x=><option key={`${r.Compétiteur}-${x.Commande}`} value={x.Commande}>{x.Commande} — {x["Nom Shopify"]} — {x["Produit brut"]}</option>)}</select><button onClick={()=>linkEngagementToCompetitor(manualSelections[`${r.Compétiteur}|${r.Équipe}`]||r["Meilleure suggestion"],r.Compétiteur,r.Équipe)}>Lier engagement</button></div>)}{(manualLinkStatus||engagementCorrectionStatus)&&<small>{manualLinkStatus||engagementCorrectionStatus}</small>}</section>}{tab==="manualLinks"&&<section className="manualLinkPanel"><h2>Liens sauvegardés</h2>{manualLinks.map(l=><div className="manualLinkRow" key={l.id}><div><strong>{l.order_number}</strong><span>{l.shopify_competitor} → {l.fitofan_competitor}</span></div><button onClick={()=>removeManualLink(l.id)}>Supprimer</button></div>)}</section>}{tab==="manualParticipants"&&<section className="manualParticipantPanel"><h2>Ajouter un participant absent de Fitofan</h2><div className="manualForm"><input placeholder="Nom compétiteur" value={newParticipant.competitor} onChange={e=>setNewParticipant(p=>({...p,competitor:e.target.value}))}/><input placeholder="Email" value={newParticipant.email} onChange={e=>setNewParticipant(p=>({...p,email:e.target.value}))}/><input placeholder="Dojo" value={newParticipant.dojo} onChange={e=>setNewParticipant(p=>({...p,dojo:e.target.value}))}/><input placeholder="Équipe" value={newParticipant.team} onChange={e=>setNewParticipant(p=>({...p,team:e.target.value}))}/><button onClick={addManualParticipant}>Ajouter participant</button></div>{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="missingSizes"&&<section className="manualParticipantPanel"><h2>Ajouter une taille manuellement</h2><p>Pour chaque produit encore sans taille, tu peux ajouter une taille sauvegardée dans Supabase.</p>{reconciled.filter(r=>r.missing).slice(0,50).map(r=>{const k=`${r.order}|${r.productKey}`;return <div className="manualSizeRow" key={k}><div><strong>{r.competitor}</strong><span>{r.order} — {r.product} — {r.rawProduct}</span></div><input placeholder="Taille" value={manualSizeInputs[k]||""} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(r.order,r.productKey,r.competitor,r.rawProduct)}>Sauvegarder taille</button></div>})}</section>}{tab==="sizeValidation"&&<section className="sizeValidationPanel"><h2>Validation des tailles</h2><p>Corrige ou valide les tailles manquantes / inhabituelles. Une validation est enregistrée comme taille manuelle et devient prioritaire.</p>{reconciled.filter(r=>sizeNeedsValidation(r)).slice(0,150).map(r=>{const k=`${normalizeOrder(r.order)}|${r.productKey}`;const current=manualSizeInputs[k]??(r.finalSize||"");return <div className={`sizeValidationRow ${sizeValidationStatus(r)==="MANQUANTE"?"missing":"warning"}`} key={k}><div><strong>{r.competitor}</strong><span>{r.order} — {r.product} — {r.rawProduct}</span><small>Actuel : {r.finalSize||"MANQUANTE"} · Source : {r.sourceSize||"aucune"} · Statut : {sizeValidationStatus(r)}</small></div><input placeholder="Taille validée" value={current} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(r.order,r.productKey,r.competitor,r.rawProduct)}>{r.finalSize?"Valider / modifier":"Ajouter taille"}</button></div>})}{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="commentSizeReview"&&<section className="sizeManagementPanel"><h2>Commandes avec commentaires</h2><p>Liste toutes les lignes produits liées à une commande ou un compétiteur avec commentaire. Utilise cette page pour appliquer rapidement une correction de taille.</p><div className="sizeEditTools"><input placeholder="Rechercher commande (#1180), nom, produit, commentaire..." value={commentSizeReviewSearch} onChange={e=>setCommentSizeReviewSearch(e.target.value)}/><button onClick={()=>setCommentSizeReviewSearch("")}>Effacer</button><span>{commentSizeReviewRows.length} ligne(s) trouvée(s)</span></div>{commentSizeReviewRows.map(r=>{const item=r.raw;const k=`${normalizeOrder(item.order)}|${item.productKey}`;const current=manualSizeInputs[k]??(item.finalSize||"");return <div className="sizeValidationRow commentReviewRow" key={`${k}|${item.rawProduct}`}><div><strong>{item.competitor}</strong><span>{item.order} — {item.product} — {item.rawProduct}</span><small>Shopify : {item.shopifySize||"vide"} · Supabase : {item.supabaseSize||"vide"} · Finale : {item.finalSize||"vide"} · Source : {item.sourceSize||"aucune"}</small>{hasUsefulComment(item.comments)&&<p className="commentBox">💬 {item.comments}</p>}</div><input placeholder="Nouvelle taille finale" value={current} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(item.order,item.productKey,item.competitor,item.rawProduct)}>Enregistrer taille</button></div>})}{commentSizeReviewRows.length===0&&<div className="emptyState">Aucune commande avec commentaire trouvée pour cette recherche.</div>}{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="orderSizeEdit"&&<section className="sizeManagementPanel"><h2>Modifier une taille manuellement sur une commande</h2><p>Recherche une commande, un compétiteur, un produit ou une taille, puis saisis la taille finale à appliquer. Cette taille sera prioritaire dans les tableaux et exports.</p><div className="sizeEditTools"><input placeholder="Rechercher commande (#1180 ou 1180), nom, produit, taille..." value={orderSizeEditSearch} onChange={e=>setOrderSizeEditSearch(e.target.value)}/><button onClick={()=>setOrderSizeEditSearch("")}>Effacer</button><span>{orderSizeEditRows.length} ligne(s) trouvée(s)</span></div>{orderSizeEditRows.map(r=>{const item=r.raw;const k=`${normalizeOrder(item.order)}|${item.productKey}`;const current=manualSizeInputs[k]??(item.finalSize||"");return <div className="sizeValidationRow" key={k}><div><strong>{item.competitor}</strong><span>{item.order} — {item.product} — {item.rawProduct}</span><small>Shopify : {item.shopifySize||"vide"} · Supabase : {item.supabaseSize||"vide"} · Finale : {item.finalSize||"vide"} · Source : {item.sourceSize||"aucune"}</small></div><input placeholder="Nouvelle taille finale" value={current} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(item.order,item.productKey,item.competitor,item.rawProduct)}>Enregistrer taille</button></div>})}{orderSizeEditRows.length===0&&<div className="emptyState">Aucune ligne trouvée pour cette recherche.</div>}{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="engagementManagement"&&<section className="engagementManagementPanel"><h2>Gestion liens Engagement ↔ Compétiteur</h2><p>Délie un engagement mal attribué ou associe une commande d’engagement à la bonne personne.</p><div className="engagementTools"><input placeholder="Rechercher nom, dojo, équipe, commande..." value={engagementSearch} onChange={e=>setEngagementSearch(e.target.value)}/><select value={engagementStatusFilter} onChange={e=>setEngagementStatusFilter(e.target.value)}><option value="all">Tous</option><option value="linked">Déjà liés</option><option value="missing">Sans engagement lié</option></select><button onClick={()=>{setEngagementSearch("");setEngagementStatusFilter("all");}}>Effacer</button><span>{engagementManagementFilteredRows.length} résultat(s)</span></div>{engagementManagementFilteredRows.map(r=>{const k=`${r.Compétiteur}|${r.Équipe}`;return <div className={`engagementLinkRow ${r.Statut==="LIÉ"?"linked":"missing"}`} key={`${r.Compétiteur}-${r.Équipe}-${r.Commande||"none"}`}><div><strong>{r.Compétiteur}</strong><span>{r.Dojo} — {r.Équipe}</span><small>{r.Statut==="LIÉ"?`Engagement lié : ${r.Commande} (${r["Nom Shopify"]})`:"Aucun engagement lié"}</small></div>{r.Statut==="LIÉ"?<button onClick={()=>unlinkEngagement(r.Commande,r.Compétiteur,r.Équipe)}>Délier</button>:<><select value={engagementLinkInputs[k]||""} onChange={e=>setEngagementLinkInputs(p=>({...p,[k]:e.target.value}))}><option value="">Choisir une commande d’engagement</option>{engagementOrders.map(e=><option key={`${k}-${e.Commande}`} value={e.Commande}>{e.Commande} — {e["Nom Shopify"]} — {e["Produit brut"]}</option>)}</select><button onClick={()=>linkEngagementToCompetitor(engagementLinkInputs[k],r.Compétiteur,r.Équipe)}>Lier</button></>}</div>})}{engagementCorrectionStatus&&<small>{engagementCorrectionStatus}</small>}</section>}{tab==="engagementCorrections"&&<section className="engagementManagementPanel"><h2>Corrections engagement sauvegardées</h2>{engagementCorrections.map(c=><div className="engagementLinkRow linked" key={c.id}><div><strong>{c.order_number}</strong><span>{c.action} — {c.competitor} — {c.team}</span></div><button onClick={()=>deleteEngagementCorrection(c.id)}>Supprimer correction</button></div>)}</section>}<section className="tableCard"><div className="tableHeader"><h2>{current.title}</h2><button onClick={()=>exportCsv(`${current.title||tab}.csv`,filteredRows)} disabled={!filteredRows.length}>Exporter ce tableau CSV</button></div><DataTable rows={filteredRows}/></section></div>}
+          </section></>}<nav className="groupedNavPanel"><div className="navGroups">{tabGroups.map(g=><button key={g.id} className={currentGroup.id===g.id?"active":""} onClick={()=>selectGroup(g)}>{g.label}</button>)}</div><div className="cleanTabButtons">{visibleTabKeys.map(id=><button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>{views[id].title}</button>)}</div></nav><section className="toolbar"><button onClick={()=>exportCsv(`${current.title||tab}.csv`,filteredRows)} disabled={!filteredRows.length}>Exporter ce rapport CSV</button><button onClick={()=>exportCsv(`club-${filters.dojo||"tous"}-${filters.team||"toutes-equipes"}-${current.title||tab}.csv`,filteredRows)} disabled={!filteredRows.length}>Export club / dojo du rapport affiché</button></section>{tab==="manualReconciliation"&&<section className="manualLinkPanel"><h2>Réconcilier les engagements manquants</h2><p>Choisis un compétiteur Fitofan sans engagement, puis associe uniquement une commande Shopify de type engagement.</p>{manualReconciliationRows.map(r=><div className="manualLinkRow" key={r.Compétiteur}><div><strong>{r.Compétiteur}</strong><span>{r.Dojo} — {r.Équipe} · Suggestion : {r["Meilleure suggestion"]||"aucune"} {r["Nom Shopify suggéré"]?`(${r["Nom Shopify suggéré"]})`:""}</span></div><select value={manualSelections[`${r.Compétiteur}|${r.Équipe}`]||r["Meilleure suggestion"]||""} onChange={e=>setManualSelections(p=>({...p,[`${r.Compétiteur}|${r.Équipe}`]:e.target.value}))}><option value="">Choisir une commande d’engagement</option>{engagementOrders.map(x=><option key={`${r.Compétiteur}-${x.Commande}`} value={x.Commande}>{x.Commande} — {x["Nom Shopify"]} — {x["Produit brut"]}</option>)}</select><button onClick={()=>linkEngagementToCompetitor(manualSelections[`${r.Compétiteur}|${r.Équipe}`]||r["Meilleure suggestion"],r.Compétiteur,r.Équipe)}>Lier engagement</button></div>)}{(manualLinkStatus||engagementCorrectionStatus)&&<small>{manualLinkStatus||engagementCorrectionStatus}</small>}</section>}{tab==="manualLinks"&&<section className="manualLinkPanel"><h2>Liens sauvegardés</h2>{manualLinks.map(l=><div className="manualLinkRow" key={l.id}><div><strong>{l.order_number}</strong><span>{l.shopify_competitor} → {l.fitofan_competitor}</span></div><button onClick={()=>removeManualLink(l.id)}>Supprimer</button></div>)}</section>}{tab==="manualParticipants"&&<section className="manualParticipantPanel"><h2>Ajouter un participant absent de Fitofan</h2><div className="manualForm"><input placeholder="Nom compétiteur" value={newParticipant.competitor} onChange={e=>setNewParticipant(p=>({...p,competitor:e.target.value}))}/><input placeholder="Email" value={newParticipant.email} onChange={e=>setNewParticipant(p=>({...p,email:e.target.value}))}/><input placeholder="Dojo" value={newParticipant.dojo} onChange={e=>setNewParticipant(p=>({...p,dojo:e.target.value}))}/><input placeholder="Équipe" value={newParticipant.team} onChange={e=>setNewParticipant(p=>({...p,team:e.target.value}))}/><button onClick={addManualParticipant}>Ajouter participant</button></div>{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="missingSizes"&&<section className="manualParticipantPanel"><h2>Ajouter une taille manuellement</h2><p>Pour chaque produit encore sans taille, tu peux ajouter une taille sauvegardée dans Supabase.</p>{reconciled.filter(r=>r.missing).slice(0,50).map(r=>{const k=`${r.order}|${r.productKey}`;return <div className="manualSizeRow" key={k}><div><strong>{r.competitor}</strong><span>{r.order} — {r.product} — {r.rawProduct}</span></div><input placeholder="Taille" value={manualSizeInputs[k]||""} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(r.order,r.productKey,r.competitor,r.rawProduct,r)}>Sauvegarder taille</button></div>})}</section>}{tab==="sizeValidation"&&<section className="sizeValidationPanel"><h2>Validation des tailles</h2><p>Corrige ou valide les tailles manquantes / inhabituelles. Une validation est enregistrée comme taille manuelle et devient prioritaire.</p>{reconciled.filter(r=>sizeNeedsValidation(r)).slice(0,150).map(r=>{const k=`${normalizeOrder(r.order)}|${sizeOverrideProductKey(r)}`;const current=manualSizeInputs[k]??(r.finalSize||"");return <div className={`sizeValidationRow ${sizeValidationStatus(r)==="MANQUANTE"?"missing":"warning"}`} key={k}><div><strong>{r.competitor}</strong><span>{r.order} — {r.product} — {r.rawProduct}</span><small>Actuel : {r.finalSize||"MANQUANTE"} · Source : {r.sourceSize||"aucune"} · Statut : {sizeValidationStatus(r)}</small></div><input placeholder="Taille validée" value={current} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(r.order,r.productKey,r.competitor,r.rawProduct,r)}>{r.finalSize?"Valider / modifier":"Ajouter taille"}</button></div>})}{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="commentSizeReview"&&<section className="sizeManagementPanel"><h2>Commandes avec commentaires</h2><p>Liste toutes les lignes produits liées à une commande ou un compétiteur avec commentaire. Utilise cette page pour appliquer rapidement une correction de taille.</p><div className="sizeEditTools"><input placeholder="Rechercher commande (#1180), nom, produit, commentaire..." value={commentSizeReviewSearch} onChange={e=>setCommentSizeReviewSearch(e.target.value)}/><button onClick={()=>setCommentSizeReviewSearch("")}>Effacer</button><span>{commentSizeReviewRows.length} ligne(s) trouvée(s)</span></div>{commentSizeReviewRows.map(r=>{const item=r.raw;const k=`${normalizeOrder(item.order)}|${sizeOverrideProductKey(item)}`;const current=manualSizeInputs[k]??(item.finalSize||"");return <div className="sizeValidationRow commentReviewRow" key={`${k}|${item.rawProduct}`}><div><strong>{item.competitor}</strong><span>{item.order} — {item.product} — {item.rawProduct}</span><small>Shopify : {item.shopifySize||"vide"} · Supabase : {item.supabaseSize||"vide"} · Finale : {item.finalSize||"vide"} · Source : {item.sourceSize||"aucune"}</small>{hasUsefulComment(item.comments)&&<p className="commentBox">💬 {item.comments}</p>}</div><input placeholder="Nouvelle taille finale" value={current} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(item.order,item.productKey,item.competitor,item.rawProduct,item)}>Enregistrer taille</button></div>})}{commentSizeReviewRows.length===0&&<div className="emptyState">Aucune commande avec commentaire trouvée pour cette recherche.</div>}{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="orderSizeEdit"&&<section className="sizeManagementPanel"><h2>Modifier une taille manuellement sur une commande</h2><p>Recherche une commande, un compétiteur, un produit ou une taille, puis saisis la taille finale à appliquer. Cette taille sera prioritaire dans les tableaux et exports.</p><div className="sizeEditTools"><input placeholder="Rechercher commande (#1180 ou 1180), nom, produit, taille..." value={orderSizeEditSearch} onChange={e=>setOrderSizeEditSearch(e.target.value)}/><button onClick={()=>setOrderSizeEditSearch("")}>Effacer</button><span>{orderSizeEditRows.length} ligne(s) trouvée(s)</span></div>{orderSizeEditRows.map(r=>{const item=r.raw;const k=`${normalizeOrder(item.order)}|${sizeOverrideProductKey(item)}`;const current=manualSizeInputs[k]??(item.finalSize||"");return <div className="sizeValidationRow" key={k}><div><strong>{item.competitor}</strong><span>{item.order} — {item.product} — {item.rawProduct}</span><small>Shopify : {item.shopifySize||"vide"} · Supabase : {item.supabaseSize||"vide"} · Finale : {item.finalSize||"vide"} · Source : {item.sourceSize||"aucune"}</small></div><input placeholder="Nouvelle taille finale" value={current} onChange={e=>setManualSizeInputs(p=>({...p,[k]:e.target.value}))}/><button onClick={()=>saveManualSize(item.order,item.productKey,item.competitor,item.rawProduct,item)}>Enregistrer taille</button></div>})}{orderSizeEditRows.length===0&&<div className="emptyState">Aucune ligne trouvée pour cette recherche.</div>}{manualParticipantStatus&&<small>{manualParticipantStatus}</small>}</section>}{tab==="engagementManagement"&&<section className="engagementManagementPanel"><h2>Gestion liens Engagement ↔ Compétiteur</h2><p>Délie un engagement mal attribué ou associe une commande d’engagement à la bonne personne.</p><div className="engagementTools"><input placeholder="Rechercher nom, dojo, équipe, commande..." value={engagementSearch} onChange={e=>setEngagementSearch(e.target.value)}/><select value={engagementStatusFilter} onChange={e=>setEngagementStatusFilter(e.target.value)}><option value="all">Tous</option><option value="linked">Déjà liés</option><option value="missing">Sans engagement lié</option></select><button onClick={()=>{setEngagementSearch("");setEngagementStatusFilter("all");}}>Effacer</button><span>{engagementManagementFilteredRows.length} résultat(s)</span></div>{engagementManagementFilteredRows.map(r=>{const k=`${r.Compétiteur}|${r.Équipe}`;return <div className={`engagementLinkRow ${r.Statut==="LIÉ"?"linked":"missing"}`} key={`${r.Compétiteur}-${r.Équipe}-${r.Commande||"none"}`}><div><strong>{r.Compétiteur}</strong><span>{r.Dojo} — {r.Équipe}</span><small>{r.Statut==="LIÉ"?`Engagement lié : ${r.Commande} (${r["Nom Shopify"]})`:"Aucun engagement lié"}</small></div>{r.Statut==="LIÉ"?<button onClick={()=>unlinkEngagement(r.Commande,r.Compétiteur,r.Équipe)}>Délier</button>:<><select value={engagementLinkInputs[k]||""} onChange={e=>setEngagementLinkInputs(p=>({...p,[k]:e.target.value}))}><option value="">Choisir une commande d’engagement</option>{engagementOrders.map(e=><option key={`${k}-${e.Commande}`} value={e.Commande}>{e.Commande} — {e["Nom Shopify"]} — {e["Produit brut"]}</option>)}</select><button onClick={()=>linkEngagementToCompetitor(engagementLinkInputs[k],r.Compétiteur,r.Équipe)}>Lier</button></>}</div>})}{engagementCorrectionStatus&&<small>{engagementCorrectionStatus}</small>}</section>}{tab==="engagementCorrections"&&<section className="engagementManagementPanel"><h2>Corrections engagement sauvegardées</h2>{engagementCorrections.map(c=><div className="engagementLinkRow linked" key={c.id}><div><strong>{c.order_number}</strong><span>{c.action} — {c.competitor} — {c.team}</span></div><button onClick={()=>deleteEngagementCorrection(c.id)}>Supprimer correction</button></div>)}</section>}<section className="tableCard"><div className="tableHeader"><h2>{current.title}</h2><button onClick={()=>exportCsv(`${current.title||tab}.csv`,filteredRows)} disabled={!filteredRows.length}>Exporter ce tableau CSV</button></div><DataTable rows={filteredRows}/></section></div>}
 function Select({label,value,options,onChange}){return <label><span>{label}</span><select value={value} onChange={e=>onChange(e.target.value)}><option value="">Tous</option>{options.map(o=><option key={o} value={o}>{o}</option>)}</select></label>}
 function Metric({label,value,warning}){return <div className={`metric ${warning?"warning":""}`}><span>{label}</span><strong>{value}</strong></div>}
 function UploadBox({title,info,onFile}){return <div className="uploadBox"><strong>{title}</strong><span>{info}</span><input type="file" accept=".csv,.txt,.xlsx,.xls" onChange={e=>onFile(e.target.files?.[0])}/></div>}
