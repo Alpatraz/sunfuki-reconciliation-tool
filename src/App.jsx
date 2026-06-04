@@ -318,8 +318,8 @@ async function saveShopifyRowsToSupabase(items,sourceFile=""){
   const key=import.meta.env.VITE_SUPABASE_ANON_KEY;
   if(!url||!key)throw new Error("Variables Supabase manquantes.");
   const endpoint=`${url.replace(/\/$/,"")}/rest/v1/shopify_order_items`;
-  const rows=(items||[]).map((r,idx)=>({
-    unique_key:`${normalizeOrder(r.order)}|${r.kind||""}|${r.productKey||r.product||""}|${r.rawProduct||""}|${r.shopifySize||""}|${idx}`,
+  const rows=withStableLineKeys(items||[]).map((r,idx)=>({
+    unique_key:r.uniqueKey||`${normalizeOrder(r.order)}|${r.kind||""}|${r.productKey||r.product||""}|${r.rawProduct||""}|${r.shopifySize||""}|${idx}`,
     order_number:normalizeOrder(r.order),
     kind:r.kind||"",
     competitor:r.competitor||"",
@@ -698,33 +698,48 @@ function teamCategoryOptions(){
 }
 
 
-function sizeOverrideProductKey(item={}){
+function sizeOverrideProductKey(item={}){return makeSizeLineKey(item);}
+function sizeOverrideLookupKeys(item={}){return makeSizeLookupKeys(item);}
+
+
+function withShopifyLineKeys(items=[]){return withStableLineKeys(items);}
+
+
+function makeSizeLineKey(item={}){
   const order=normalizeOrder(item.order||item.order_number||item.Commande||"");
+  const unique=clean(item.uniqueKey||item.unique_key||"");
+  if(unique)return `line:${unique}`;
+
   const productKey=clean(item.productKey||item.product_key||item.Produit||item.product||"");
   const raw=clean(item.rawProduct||item.raw_product||item["Produit Shopify brut"]||"");
-  const unique=clean(item.uniqueKey||item.unique_key||"");
-  const line=item.lineIndex ?? item.line_index ?? item.rowIndex ?? item.row_index ?? item.itemIndex ?? "";
-  if(unique)return `line:${unique}`;
-  return `line:${order}|${productKey}|${raw}|${line}`;
+  const size=clean(item.shopifySize||item.shopify_size||item["Taille Shopify"]||"");
+  const qty=clean(item.quantity||item.effectiveQty||item.Quantité||"");
+  const idx=clean(item.rowIndex ?? item.row_index ?? item.lineIndex ?? item.line_index ?? item.itemIndex ?? "");
+  return `line:${order}|${productKey}|${raw}|${size}|${qty}|${idx}`;
 }
-function sizeOverrideLookupKeys(item={}){
+function makeLegacySizeKey(item={}){
   const order=normalizeOrder(item.order||item.order_number||item.Commande||"");
   const productKey=clean(item.productKey||item.product_key||item.Produit||item.product||"");
-  const lineKey=sizeOverrideProductKey(item);
-  return [lineKey,productKey].filter(Boolean).map(k=>`${order}|${k}`);
+  return `${order}|${productKey}`;
+}
+function makeLineSizeKey(item={}){
+  const order=normalizeOrder(item.order||item.order_number||item.Commande||"");
+  return `${order}|${makeSizeLineKey(item)}`;
+}
+function makeSizeLookupKeys(item={}){
+  return [makeLineSizeKey(item), makeLegacySizeKey(item)].filter(Boolean);
+}
+function withStableLineKeys(items=[]){
+  return (items||[]).map((item,idx)=>{
+    const uniqueKey=item.uniqueKey||item.unique_key||`${normalizeOrder(item.order)}|${item.kind||""}|${item.productKey||item.product||""}|${item.rawProduct||""}|${item.shopifySize||""}|${idx}`;
+    return {...item,rowIndex:item.rowIndex??idx,uniqueKey};
+  });
 }
 
-
-function withShopifyLineKeys(items=[]){
-  return (items||[]).map((item,idx)=>({
-    ...item,
-    rowIndex:item.rowIndex ?? idx,
-    uniqueKey:item.uniqueKey || `${normalizeOrder(item.order)}|${item.kind||""}|${item.productKey||item.product||""}|${item.rawProduct||""}|${item.shopifySize||""}|${idx}`
-  }));
-}
+function getManualSizeForItem(item,manualSizeMap){return getManualSizeForItem(item,manualSizeMap);}
 
 export default function App(){const [shopifyCloudStatus,setShopifyCloudStatus]=useState("");const [shopifyCloudRows,setShopifyCloudRows]=useState([]);const [manualCompetitors,setManualCompetitors]=useState([]);const [manualSizes,setManualSizes]=useState([]);const [manualParticipantStatus,setManualParticipantStatus]=useState("");const [newParticipant,setNewParticipant]=useState({competitor:"",email:"",dojo:"",team:""});const [manualSizeInputs,setManualSizeInputs]=useState({});const [orderSizeEditSearch,setOrderSizeEditSearch]=useState("");const [commentSizeReviewSearch,setCommentSizeReviewSearch]=useState("");const [savedSizeKeys,setSavedSizeKeys]=useState(new Set());const [engagementCorrections,setEngagementCorrections]=useState([]);const [engagementCorrectionStatus,setEngagementCorrectionStatus]=useState("");const [engagementLinkInputs,setEngagementLinkInputs]=useState({});const [engagementSearch,setEngagementSearch]=useState("");const [engagementStatusFilter,setEngagementStatusFilter]=useState("all");const [fitofanCloudStatus,setFitofanCloudStatus]=useState("");const[manualLinks,setManualLinks]=useState([]);const[manualLinkStatus,setManualLinkStatus]=useState("");const[manualSelections,setManualSelections]=useState({});const[fitofanRaw,setFitofanRaw]=useState([]);const[shopifyRaw,setShopifyRaw]=useState([]);const[supabaseRaw,setSupabaseRaw]=useState([]);const[files,setFiles]=useState({});const[tab,setTab]=useState("dashboard");const[search,setSearch]=useState("");const[filters,setFilters]=useState({dojo:"",team:"",product:"",competitor:""});const[supabaseStatus,setSupabaseStatus]=useState("");useEffect(()=>{try{const saved=localStorage.getItem(STORAGE_FITOFAN);const savedFile=localStorage.getItem(STORAGE_FITOFAN_FILE);if(saved)setFitofanRaw(JSON.parse(saved));if(savedFile)setFiles(p=>({...p,fitofan:savedFile}));}catch(e){console.warn(e)}},[]);useEffect(()=>{refreshManualLinks();refreshEngagementCorrections();refreshManualCompetitors();refreshManualSizes();},[]);
-async function upload(type,file){if(!file)return;const rows=await readFileRows(file);setFiles(p=>({...p,[type]:`${file.name} (${rows.length} lignes)`}));if(type==="fitofan"){setFitofanRaw(rows);localStorage.setItem(STORAGE_FITOFAN,JSON.stringify(rows));localStorage.setItem(STORAGE_FITOFAN_FILE,`${file.name} (${rows.length} lignes)`);}if(type==="shopify")setSavedSizeKeys(new Set());setShopifyCloudRows([]);setShopifyRaw(withShopifyLineKeys(rows));if(type==="supabase")setSupabaseRaw(rows);}function resetFitofan(){localStorage.removeItem(STORAGE_FITOFAN);localStorage.removeItem(STORAGE_FITOFAN_FILE);setFitofanRaw([]);setFiles(p=>({...p,fitofan:""}));}
+async function upload(type,file){if(!file)return;const rows=await readFileRows(file);setFiles(p=>({...p,[type]:`${file.name} (${rows.length} lignes)`}));if(type==="fitofan"){setFitofanRaw(rows);localStorage.setItem(STORAGE_FITOFAN,JSON.stringify(rows));localStorage.setItem(STORAGE_FITOFAN_FILE,`${file.name} (${rows.length} lignes)`);}if(type==="shopify")setSavedSizeKeys(new Set());setShopifyCloudRows([]);setShopifyRaw(withStableLineKeys(rows));if(type==="supabase")setSupabaseRaw(rows);}function resetFitofan(){localStorage.removeItem(STORAGE_FITOFAN);localStorage.removeItem(STORAGE_FITOFAN_FILE);setFitofanRaw([]);setFiles(p=>({...p,fitofan:""}));}
   async function saveFitofanCloud() {
     setFitofanCloudStatus("Sauvegarde Fitofan dans Supabase...");
     try {
@@ -779,25 +794,36 @@ async function addManualParticipant(){
 async function saveManualSize(order,productKey,competitor,rawProduct,itemOverride=null){
   const item=itemOverride||{order,productKey,competitor,rawProduct};
   const normalizedOrder=normalizeOrder(order);
-  const lineProductKey=sizeOverrideProductKey(item);
-  const legacyKey=`${normalizedOrder}|${productKey}`;
+  const lineProductKey=makeSizeLineKey(item);
   const lineKey=`${normalizedOrder}|${lineProductKey}`;
+  const legacyKey=`${normalizedOrder}|${productKey}`;
   const value=manualSizeInputs[lineKey] ?? manualSizeInputs[legacyKey] ?? "";
   setManualParticipantStatus("Sauvegarde taille manuelle...");
   try{
     if(!clean(value))throw new Error("Taille requise.");
     const normalized=normalizeLooseSize(value);
-    const payload={order_number:normalizedOrder,product_key:lineProductKey,competitor:competitor||"",raw_product:rawProduct||"",size_raw:value,size_normalized:normalized,source:"manuel"};
-    const saved=await saveManualSizeToSupabase(payload);
-    const savedRow=Array.isArray(saved)&&saved[0]?saved[0]:payload;
+    const payload={
+      order_number:normalizedOrder,
+      product_key:lineProductKey,
+      competitor:competitor||"",
+      raw_product:rawProduct||"",
+      size_raw:value,
+      size_normalized:normalized,
+      source:"manuel"
+    };
 
+    await saveManualSizeToSupabase(payload);
+
+    const savedRow={...payload,created_at:new Date().toISOString()};
     setManualSizes(prev=>{
       const without=(prev||[]).filter(s=>`${normalizeOrder(s.order_number)}|${s.product_key}`!==lineKey);
       return [savedRow,...without];
     });
     setSavedSizeKeys(prev=>{const next=new Set(prev);next.add(lineKey);return next;});
     setManualSizeInputs(p=>({...p,[lineKey]:"",[legacyKey]:""}));
-    await refreshManualSizes();
+
+    // Relecture non bloquante : si la DB a bien sauvé, elle restera après reload.
+    try{await refreshManualSizes();}catch(_){}
     setManualParticipantStatus(`Taille sauvegardée : ${normalized}`);
   }catch(e){
     setManualParticipantStatus(e.message||"Erreur sauvegarde taille");
@@ -839,7 +865,7 @@ async function loadShopifyCloud(){
   setShopifyCloudStatus("Chargement Shopify depuis Supabase...");
   try{
     const rows=await loadShopifyRowsFromSupabase();
-    setSavedSizeKeys(new Set());setShopifyCloudRows(withShopifyLineKeys(rows));
+    setSavedSizeKeys(new Set());setShopifyCloudRows(withStableLineKeys(rows));
     setFiles(p=>({...p,shopify:`Supabase shopify_order_items (${rows.length} lignes)`}));
     setShopifyCloudStatus(`Shopify chargé depuis Supabase : ${rows.length} lignes complètes`);
   }catch(e){
@@ -1090,7 +1116,7 @@ const currentGroup=tabGroups.find(g=>g.tabs.includes(tab))||tabGroups[0];
 const visibleTabKeys=currentGroup.tabs.filter(k=>views[k]);
 function selectGroup(g){const first=g.tabs.find(k=>views[k]);if(first)setTab(first);}
 const current=views[tab];const filteredRows=tab==="dashboard"?dashboardFiltered:applyFilters(current.rows||[]);
-return <div className="app"><header><h1>Réconciliation Sunfuki V33.12</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
+return <div className="app"><header><h1>Réconciliation Sunfuki V33.13</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
         <div className={sourceStateClass(fitofanRaw.length)}>
           <div className="sourceTop">
             <strong>1. Fitofan</strong>
