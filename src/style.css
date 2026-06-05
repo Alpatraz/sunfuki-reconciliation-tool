@@ -630,3 +630,38 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
 @media(max-width:900px){
   .sizeEditTools{grid-template-columns:1fr}
 }
+
+.emptyState{
+  padding:16px;
+  border:1px dashed #cbd5e1;
+  border-radius:14px;
+  background:#f8fafc;
+  color:#64748b;
+  font-weight:800;
+  margin-top:12px;
+}
+
+.commentBox{margin:8px 0 0;padding:10px 12px;border-left:4px solid #f59e0b;background:#fffbeb;border-radius:10px;color:#78350f;font-weight:700;}
+.commentReviewRow{align-items:flex-start;}
+
+.commentCorrectionGrid{
+  display:grid;
+  grid-template-columns:minmax(160px,1fr) minmax(160px,1fr) minmax(140px,1fr) auto;
+  gap:10px;
+  align-items:center;
+  width:100%;
+}
+.commentCorrectionGrid input,
+.commentCorrectionGrid select{
+  border:1px solid #cbd5e1;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:700;
+  background:#fff;
+}
+.commentCorrectionGrid button{
+  white-space:nowrap;
+}
+@media (max-width:900px){
+  .commentCorrectionGrid{grid-template-columns:1fr;}
+}
