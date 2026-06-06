@@ -20,7 +20,29 @@ function pick(row,names){const e=Object.entries(row||{});for(const w of names){c
 function detectDelimiter(text){const s=text.slice(0,5000);return [",",";","\t"].sort((a,b)=>s.split(b).length-s.split(a).length)[0];}
 function parseCsv(text){const d=detectDelimiter(text);const rows=[];let row=[],cell="",q=false;for(let i=0;i<text.length;i++){const ch=text[i],n=text[i+1];if(ch==='"'&&q&&n==='"'){cell+='"';i++;}else if(ch==='"')q=!q;else if(ch===d&&!q){row.push(cell);cell="";}else if((ch==="\n"||ch==="\r")&&!q){if(ch==="\r"&&n==="\n")i++;row.push(cell);if(row.some(v=>clean(v)))rows.push(row);row=[];cell="";}else cell+=ch;}row.push(cell);if(row.some(v=>clean(v)))rows.push(row);if(!rows.length)return[];const h=rows[0].map((x,i)=>clean(x)||`col_${i}`);return rows.slice(1).map(r=>{const o={};h.forEach((x,i)=>o[x]=clean(r[i]||""));return o;});}
 async function readFileRows(file){const name=file.name.toLowerCase();if(name.endsWith(".xlsx")||name.endsWith(".xls")){const b=await file.arrayBuffer();const wb=XLSX.read(b,{type:"array"});const all=[];for(const sn of wb.SheetNames){const ws=wb.Sheets[sn];XLSX.utils.sheet_to_json(ws,{defval:"",raw:false}).forEach(r=>all.push({...r,__sheet:sn}));}return all;}return parseCsv(await file.text());}
-function exportCsv(filename,rows){if(!rows.length)return;const h=Object.keys(rows[0]);const esc=v=>`"${String(v??"").replace(/"/g,'""')}"`;const csv=[h.join(";"),...rows.map(r=>h.map(x=>esc(r[x])).join(";"))].join("\n");const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);}
+function excelSafeValue(value,header=""){
+  const raw=String(value??"");
+  const h=norm(header);
+  const isSizeColumn=h.includes("taille")||h.includes("size");
+  // Excel transforme 00, 000, 0000 en 0 si on ne force pas le texte.
+  // On force uniquement les colonnes de taille pour ne pas casser les quantités ou commandes.
+  if(isSizeColumn && /^0+$/.test(raw.trim()))return `'${raw.trim()}`;
+  if(isSizeColumn && /^0+[0-9]+$/.test(raw.trim()))return `'${raw.trim()}`;
+  return raw;
+}
+function exportCsv(filename,rows){
+  if(!rows.length)return;
+  const h=Object.keys(rows[0]);
+  const esc=(v,header)=>`"${excelSafeValue(v,header).replace(/"/g,'""')}"`;
+  const csv=[h.join(";"),...rows.map(r=>h.map(x=>esc(r[x],x)).join(";"))].join("\n");
+  const blob=new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 function normalizeOrder(o=""){const raw=clean(o);const m=raw.match(/#?\d+/g);if(!m||!m.length)return raw?(raw.startsWith("#")?raw:`#${raw}`):"";return m.map(x=>x.startsWith("#")?x:`#${x}`).join(" | ");}
 function splitOrders(o=""){const raw=clean(o);const m=raw.match(/#?\d+/g);if(!m||!m.length)return raw?[normalizeOrder(raw)]:[];return m.map(x=>x.startsWith("#")?x:`#${x}`);}
 function competitorKey(n=""){return norm(n);}
