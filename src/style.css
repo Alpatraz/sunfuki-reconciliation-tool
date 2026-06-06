@@ -665,3 +665,88 @@ tr.row.muted td { color: #64748b; background: #f8fafc; }
 @media (max-width:900px){
   .commentCorrectionGrid{grid-template-columns:1fr;}
 }
+
+.manualEquipmentForm{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:12px;align-items:center;margin:16px 0;padding:16px;border:1px solid #dbe5f2;border-radius:18px;background:#f8fbff}.manualEquipmentForm input,.manualEquipmentForm select{border:1px solid #cbd5e1;border-radius:12px;padding:11px 12px;font-weight:700;background:white}.manualEquipmentForm label{font-weight:800;display:flex;gap:8px;align-items:center}.manualEquipmentList{display:grid;gap:10px;margin-top:16px}.manualEquipmentCard{display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:center;border:1px solid #dbe5f2;border-radius:16px;background:#fff;padding:12px 14px}.manualEquipmentCard span,.manualEquipmentCard small{grid-column:1}.manualEquipmentCard button{grid-row:1 / span 3;grid-column:2;background:#dc2626;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:900}@media(max-width:900px){.manualEquipmentForm{grid-template-columns:1fr}.manualEquipmentCard{grid-template-columns:1fr}.manualEquipmentCard button{grid-row:auto;grid-column:auto}}
+
+.internalOrderPanel h3{
+  margin:22px 0 10px;
+}
+.internalOrderHeader{
+  background:#f8fafc;
+  border:1px solid #dbe4f0;
+  border-radius:18px;
+  padding:16px;
+}
+.manualEquipmentForm.compact{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  gap:12px;
+  align-items:center;
+}
+.internalProductPicker{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+  margin-bottom:14px;
+}
+.internalProductPicker button{
+  border:1px solid #cbd5e1;
+  background:#fff;
+  border-radius:999px;
+  padding:10px 14px;
+  font-weight:800;
+  cursor:pointer;
+}
+.internalProductPicker button.selected{
+  background:#0f172a;
+  color:#fff;
+  border-color:#0f172a;
+}
+.internalDraftList{
+  display:grid;
+  gap:14px;
+}
+.internalDraftCard{
+  border:1px solid #dbe4f0;
+  background:#fff;
+  border-radius:18px;
+  padding:14px;
+}
+.internalDraftTitle{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:center;
+  margin-bottom:10px;
+}
+.internalSizeLine{
+  display:grid;
+  grid-template-columns:1fr 120px auto;
+  gap:10px;
+  align-items:center;
+  margin:8px 0;
+}
+.internalSizeLine input{
+  border:1px solid #cbd5e1;
+  border-radius:12px;
+  padding:10px 12px;
+  font-weight:700;
+}
+.secondaryBtn{
+  margin-top:8px;
+  background:#e2e8f0!important;
+  color:#0f172a!important;
+}
+.internalOrderActions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin:18px 0;
+}
+.primaryAction{
+  background:#16a34a!important;
+  color:#fff!important;
+}
+@media (max-width:800px){
+  .internalSizeLine{grid-template-columns:1fr;}
+}
