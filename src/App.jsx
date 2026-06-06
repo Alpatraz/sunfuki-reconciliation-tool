@@ -672,11 +672,11 @@ function productTeamFromTitle(raw=""){
 }
 function displayProductTeam(itemTeam="", competitorTeam="", kind="product"){
   if(kind!=="product")return competitorTeam||"";
-  return itemTeam || "Sans équipe";
+  return itemTeam || "ÉQUIPE MANQUANTE";
 }
 
 
-function supplierTeamForRow(r){
+function exportTeam(r){
   return displayProductTeam(r?.productTeam||"", "", r?.kind||"product");
 }
 
@@ -746,18 +746,44 @@ function hasUsefulComment(value=""){
 
 
 function displayTeamCategory(value=""){
-  const n=norm(value);
+  const raw=clean(value);
+  const n=norm(raw);
   if(!n)return "";
+
+  // Exception demandée : coach-propriétaire est regroupé sous Coach.
+  if(n.includes("coach")&&(n.includes("proprietaire")||n.includes("propriétaire")||n.includes("owner")))return "Coach";
+
   if(n.includes("assistant"))return "Assistant-Coach";
   if(n.includes("coach"))return "Coach";
-  if(n.includes("proprietaire")||n.includes("propriétaire")||n.includes("owner"))return "Propriétaire";
-  if(n.includes("karate sunfuki")||n.includes("karaté sunfuki")||n==="sunfuki")return "Karaté Sunfuki";
+
+  // Unifier toutes les variantes International / International Cobra / Cobra International.
   if(n.includes("international")||n.includes("inter"))return "Cobra International";
+
   if(n.includes("cobra"))return "Cobra";
-  return clean(value);
+
+  // Propriétaires : garder les catégories spécifiques pour les produits distincts.
+  if(n.includes("proprietaire")||n.includes("propriétaire")||n.includes("owner")){
+    if(n.includes("sunfuki"))return "Propriétaire Sunfuki";
+    if(n.includes("vendeur"))return "Propriétaire vendeur";
+    if(n.includes("famille"))return "Propriétaire famille";
+    return raw||"Propriétaire";
+  }
+
+  if(n.includes("karate sunfuki")||n.includes("karaté sunfuki")||n==="sunfuki")return "Karaté Sunfuki";
+  return raw;
 }
 function teamCategoryOptions(){
-  return ["Cobra","Cobra International","Coach","Assistant-Coach","Propriétaire","Karaté Sunfuki"];
+  return [
+    "Cobra",
+    "Cobra International",
+    "Coach",
+    "Assistant-Coach",
+    "Propriétaire",
+    "Propriétaire Sunfuki",
+    "Propriétaire vendeur",
+    "Propriétaire famille",
+    "Karaté Sunfuki"
+  ];
 }
 
 
@@ -942,7 +968,7 @@ function expandInternalEquipmentDraft(form={},draft=[]){
         competitor:form.competitor||"",
         email:form.email||"",
         dojo:form.dojo||"",
-        team:form.team||"",
+        team:displayTeamCategory(form.team)||form.team||"",
         raw_product:line.product,
         product_key:supplierProductKey(line.product),
         product:supplierProductName(line.product,supplierProductKey(line.product)),
@@ -956,6 +982,32 @@ function expandInternalEquipmentDraft(form={},draft=[]){
     });
   });
   return rows;
+}
+
+function includeInClientReport(row={}){
+  if(row.internalOrder)return !!row.includeClient;
+  return true;
+}
+function includeInSupplierReport(row={}){
+  if(row.internalOrder)return !!row.includeSupplier;
+  return !row.excluded;
+}
+
+
+function resolveExportTeam(row={}, fitofanCompetitors=[]){
+  const direct=displayTeamCategory(row.productTeam||row.team||row.Équipe||"");
+  if(direct)return direct;
+
+  const ckey=row.ckey||competitorKey(row.competitor||row.Compétiteur||"", row.email||row.Email||"");
+  const found=(fitofanCompetitors||[]).find(f=>f.key===ckey || norm(f.competitor)===norm(row.competitor||row.Compétiteur||"") || (f.email&&norm(f.email)===norm(row.email||row.Email||"")));
+  const fromFitofan=displayTeamCategory(found?.team||"");
+  if(fromFitofan)return fromFitofan;
+
+  const text=[row.rawProduct,row.product,row.comments,row.status,row.notes,row.raw].map(x=>clean(String(x||""))).join(" ");
+  const fromText=displayTeamCategory(text);
+  if(fromText)return fromText;
+
+  return "ÉQUIPE MANQUANTE";
 }
 
 export default function App(){const [shopifyCloudStatus,setShopifyCloudStatus]=useState("");const [shopifyCloudRows,setShopifyCloudRows]=useState([]);const [manualCompetitors,setManualCompetitors]=useState([]);const [manualSizes,setManualSizes]=useState([]);const [manualParticipantStatus,setManualParticipantStatus]=useState("");const [newParticipant,setNewParticipant]=useState({competitor:"",email:"",dojo:"",team:""});const [manualSizeInputs,setManualSizeInputs]=useState({});const [orderSizeEditSearch,setOrderSizeEditSearch]=useState("");const [commentSizeReviewSearch,setCommentSizeReviewSearch]=useState("");const [commentCorrections,setCommentCorrections]=useState([]);const [commentCorrectionInputs,setCommentCorrectionInputs]=useState({});const [commentCorrectionStatus,setCommentCorrectionStatus]=useState("");const [manualEquipmentOrders,setManualEquipmentOrders]=useState([]);const [manualEquipmentStatus,setManualEquipmentStatus]=useState("");const [manualEquipmentForm,setManualEquipmentForm]=useState({competitor:"",email:"",dojo:"",team:"",product:"",size:"",quantity:1,includeSupplier:true,includeClient:false,notes:""});const [manualEquipmentDraft,setManualEquipmentDraft]=useState([]);const [savedSizeKeys,setSavedSizeKeys]=useState(new Set());const [engagementCorrections,setEngagementCorrections]=useState([]);const [engagementCorrectionStatus,setEngagementCorrectionStatus]=useState("");const [engagementLinkInputs,setEngagementLinkInputs]=useState({});const [engagementSearch,setEngagementSearch]=useState("");const [engagementStatusFilter,setEngagementStatusFilter]=useState("all");const [fitofanCloudStatus,setFitofanCloudStatus]=useState("");const[manualLinks,setManualLinks]=useState([]);const[manualLinkStatus,setManualLinkStatus]=useState("");const[manualSelections,setManualSelections]=useState({});const[fitofanRaw,setFitofanRaw]=useState([]);const[shopifyRaw,setShopifyRaw]=useState([]);const[supabaseRaw,setSupabaseRaw]=useState([]);const[files,setFiles]=useState({});const[tab,setTab]=useState("dashboard");const[search,setSearch]=useState("");const[filters,setFilters]=useState({dojo:"",team:"",product:"",competitor:""});const[supabaseStatus,setSupabaseStatus]=useState("");useEffect(()=>{try{const saved=localStorage.getItem(STORAGE_FITOFAN);const savedFile=localStorage.getItem(STORAGE_FITOFAN_FILE);if(saved)setFitofanRaw(JSON.parse(saved));if(savedFile)setFiles(p=>({...p,fitofan:savedFile}));}catch(e){console.warn(e)}},[]);useEffect(()=>{refreshManualLinks();refreshEngagementCorrections();refreshManualCompetitors();refreshManualSizes();refreshCommentCorrections();refreshManualEquipmentOrders();},[]);
@@ -1252,7 +1304,7 @@ const manualLinkByOrder=useMemo(()=>{const m=new Map();manualLinks.forEach(l=>{i
   return m;
 },[manualSizes]);const reconciled=useMemo(()=>{const corrections=new Map(),commentsByOrder=new Map(),commentsByCompetitor=new Map();supabase.forEach(s=>{const comment=s.comments||(s.kind!=="product"?s.rawProduct:"");if(comment){if(s.order){if(!commentsByOrder.has(s.order))commentsByOrder.set(s.order,[]);commentsByOrder.get(s.order).push(comment);}if(s.ckey){if(!commentsByCompetitor.has(s.ckey))commentsByCompetitor.set(s.ckey,[]);commentsByCompetitor.get(s.ckey).push(comment);}}if(s.kind==="product"&&s.size&&s.order)corrections.set(productKey(s.order,s.productKey),s);});return shopifyWithInternal.map(item=>{const manualLink=manualLinkByOrder.get(item.order);if(manualLink){item={...item,competitor:manualLink.fitofan_competitor||item.competitor,ckey:competitorKey(manualLink.fitofan_competitor||item.competitor),dojo:manualLink.fitofan_dojo||item.dojo,team:manualLink.fitofan_team||item.team,productTeam:item.productTeam||productTeamFromTitle(item.rawProduct),manualLinked:true,manualOriginalCompetitor:item.competitor};}if(item.kind!=="product")return item;const corr=corrections.get(productKey(item.order,item.productKey));const commentCorrection=commentCorrectionMap.get(commentCorrectionKey(item));if(commentCorrection){item={...item,dojo:commentCorrection.dojo||item.dojo,team:commentCorrection.team||item.team,commentValidated:true,commentValidationText:commentCorrection.comment_text||""};}const manualSize=getManualSizeOverride(item,manualSizeMap);let finalSize=manualSize?.size_normalized||commentCorrection?.size_normalized||corr?.size||item.shopifySize||"";let sourceSize=manualSize?.size_normalized?"Manuel":(commentCorrection?.size_normalized?"Commentaire validé":(corr?.size?"Supabase":(item.shopifySize?"Shopify":"")));if(!hasSize(item.productKey)){finalSize="Taille unique";sourceSize="Taille unique";}const missing=!finalSize&&hasSize(item.productKey)&&!item.excluded;const comments=[...new Set([...(commentsByOrder.get(item.order)||[]),...(commentsByCompetitor.get(item.ckey)||[])])].join(" | ");let status=item.excluded?item.status:"OK SHOPIFY";if(corr&&!item.shopifySize)status="TAILLE AJOUTÉE PAR SUPABASE";if(corr&&item.shopifySize&&item.shopifySize!==corr.size)status="TAILLE MODIFIÉE PAR SUPABASE";if(corr&&item.shopifySize&&item.shopifySize===corr.size)status="TAILLE CONFIRMÉE PAR SUPABASE";if(missing)status="TAILLE MANQUANTE";if(comments)status+=" + COMMENTAIRE";if(commentCorrection)status+=" + COMMENTAIRE VALIDÉ";const finalSizeAnalysis=analyzeSize(finalSize,sourceSize);return{...item,supabaseSizeRaw:corr?.sizeRaw||"",supabaseSize:corr?.size||"",manualSizeRaw:manualSize?.size_raw||"",finalSize,finalSizeStatus:sourceSize==="Manuel"?"STANDARD":(missing?"MANQUANTE":finalSizeAnalysis.status),sourceSize,missing,initialShopifySizeMissing:!item.shopifySize&&hasSize(item.productKey)&&!item.excluded,comments,commentValidated:!!commentCorrection,commentCorrectionDojo:commentCorrection?.dojo||"",commentCorrectionTeam:commentCorrection?.team||"",commentCorrectionSize:commentCorrection?.size_normalized||"",status};});},[shopifyWithInternal,supabase,manualLinkByOrder,commentCorrectionMap,manualSizeMap]);
 const detailRows=reconciled.map(r=>({Commande:r.order,Compétiteur:r.competitor,"Nom Shopify original":r.manualOriginalCompetitor||"","Lien manuel":r.manualLinked?"Oui":"Non",Client:r.client,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Type:r.kind,"Produit Shopify brut":r.rawProduct,"Produit normalisé":r.productKey,Produit:r.product,"Taille Shopify brute":r.shopifySizeRaw||"","Taille Shopify":r.shopifySize||"","Statut taille Shopify":r.shopifySizeStatus||"","Taille Shopify initialement manquante":r.initialShopifySizeMissing?"Oui":"Non","Taille Supabase brute":r.supabaseSizeRaw||"","Taille Supabase":r.supabaseSize||"","Taille manuelle":r.manualSizeRaw||"","Taille finale":r.finalSize||"","Statut taille finale":r.finalSizeStatus||"","Source taille":r.sourceSize||"",Quantité:r.quantity,"Qté remboursée":r.refunded,"Qté effective":r.effectiveQty,"Exclu fournisseur":r.excluded?"Oui":"Non",Statut:r.status,"Commentaire traité":r.commentValidated?"Oui":"Non","Source commande":r.internalOrder?"Interne hors Shopify":"Shopify","Inclure fournisseur":r.includeSupplier===false?"Non":"Oui","Inclure rapport client":r.includeClient===false?"Non":"Oui",Commentaires:r.comments||""}));
-const unusualSizeRows=reconciled.filter(r=>r.kind==="product"&&!r.excluded&&r.finalSizeStatus==="INHABITUELLE").map(r=>({Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Commande:r.order,Produit:r.product,"Produit Shopify brut":r.rawProduct,"Taille Shopify brute":r.shopifySizeRaw||"","Taille Supabase brute":r.supabaseSizeRaw||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"",Statut:"TAILLE INHABITUELLE À VÉRIFIER",Commentaires:r.comments||""}));const shopifyInitialMissingRows=reconciled.filter(r=>r.kind==="product"&&r.initialShopifySizeMissing).map(r=>({Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Commande:r.order,Produit:r.product,"Produit Shopify brut":r.rawProduct,"Taille Shopify initiale":r.shopifySize||"MANQUANTE","Taille Supabase":r.supabaseSize||"Aucune","Taille finale":r.finalSize||"MANQUANTE","Statut régularisation":r.supabaseSize&&r.finalSize?"RÉGULARISÉ PAR SUPABASE":"TOUJOURS MANQUANT",Commentaires:r.comments||""}));const supplierRows=useMemo(()=>{const map=new Map();expandRowsByFinalSizes(reconciled).forEach(r=>{if(r.kind!=="product"||r.excluded||!r.finalSize)return;const key=`${r.productKey}|${r.team}|${r.dojo}|${r.finalSize}`;const prev=map.get(key)||{Produit:r.product,"Produit normalisé":r.productKey,Équipe:r.team||"Non précisée",Taille:r.finalSize,Quantité:0};prev.Quantité+=r.effectiveQty;map.set(key,prev);});return Array.from(map.values()).sort((a,b)=>`${a.Dojo}${a.Équipe}${a.Produit}${a.Taille}`.localeCompare(`${b.Dojo}${b.Équipe}${b.Produit}${b.Taille}`));},[reconciled]);
+const unusualSizeRows=reconciled.filter(r=>r.kind==="product"&&!r.excluded&&r.finalSizeStatus==="INHABITUELLE").map(r=>({Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Commande:r.order,Produit:r.product,"Produit Shopify brut":r.rawProduct,"Taille Shopify brute":r.shopifySizeRaw||"","Taille Supabase brute":r.supabaseSizeRaw||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"",Statut:"TAILLE INHABITUELLE À VÉRIFIER",Commentaires:r.comments||""}));const shopifyInitialMissingRows=reconciled.filter(r=>r.kind==="product"&&r.initialShopifySizeMissing).map(r=>({Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Commande:r.order,Produit:r.product,"Produit Shopify brut":r.rawProduct,"Taille Shopify initiale":r.shopifySize||"MANQUANTE","Taille Supabase":r.supabaseSize||"Aucune","Taille finale":r.finalSize||"MANQUANTE","Statut régularisation":r.supabaseSize&&r.finalSize?"RÉGULARISÉ PAR SUPABASE":"TOUJOURS MANQUANT",Commentaires:r.comments||""}));const supplierRows=useMemo(()=>{const map=new Map();expandRowsByFinalSizes(reconciled).forEach(r=>{if(r.kind!=="product"||r.excluded||!r.finalSize)return;const key=`${r.productKey}|${r.team}|${r.dojo}|${r.finalSize}`;const prev=map.get(key)||{Produit:r.product,"Produit normalisé":r.productKey,Équipe:exportTeam(r),Taille:r.finalSize,Quantité:0};prev.Quantité+=r.effectiveQty;map.set(key,prev);});return Array.from(map.values()).sort((a,b)=>`${a.Dojo}${a.Équipe}${a.Produit}${a.Taille}`.localeCompare(`${b.Dojo}${b.Équipe}${b.Produit}${b.Taille}`));},[reconciled,fitofan]);
 const engagementOrders=useMemo(()=>reconciled.filter(r=>isEngagementOrderRow(r)).map(r=>({Commande:r.order,"Nom Shopify":r.manualOriginalCompetitor||r.competitor||"",Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),"Produit brut":r.rawProduct||""})),[reconciled]);
 const resolvedEngagementState=useMemo(()=>buildResolvedEngagementState({fitofan,reconciled,engagementCorrections}),[fitofan,reconciled,engagementCorrections]);
 const engagementManagementRows=resolvedEngagementState.managementRows;
@@ -1287,7 +1339,7 @@ const manualReconciliationRows=useMemo(()=>{
     };
   });
 },[correctedMissingEngagementRows,engagementOrders]);const manualLinksRows=manualLinks.map(l=>({Commande:l.order_number,"Nom Shopify":l.shopify_competitor,"Compétiteur Fitofan":l.fitofan_competitor,Dojo:l.fitofan_dojo,Équipe:l.fitofan_team,Créé:l.created_at||"",Action:"Supprimer"}));const finalParticipantsRows=useMemo(()=>fitofan.competitors.map(f=>{const rows=reconciled.filter(r=>r.ckey===f.key);const products=rows.filter(r=>r.kind==="product"&&!r.excluded);const engagements=rows.filter(r=>isEngagementOrderRow(r));return{Compétiteur:f.competitor,Email:f.email,Dojo:f.dojo,Équipe:displayTeamCategory(f.team),Source:f.manual?"Ajout manuel":"Fitofan","Engagement signé":engagements.length?"Oui":"Non","Commandes liées":[...new Set(rows.map(r=>r.order).filter(Boolean))].join(" | "),"Produits commandés":products.map(r=>`${r.product} (${r.finalSize||"taille manquante"}) x${r.effectiveQty||r.quantity||1}`).join(" | "),"Tailles Shopify":products.map(r=>`${r.order} - ${r.product}: ${r.shopifySize||"vide"} x${r.effectiveQty||r.quantity||1}`).join(" | "),"Tailles Supabase":products.map(r=>`${r.order} - ${r.product}: ${r.supabaseSize||"aucune"} x${r.effectiveQty||r.quantity||1}`).join(" | "),"Tailles manuelles":products.map(r=>`${r.order} - ${r.product}: ${r.manualSizeRaw||"aucune"}`).join(" | "),"Tailles finales":products.map(r=>`${r.order} - ${r.product}: ${r.finalSize||"taille manquante"} x${r.effectiveQty||r.quantity||1} (${r.sourceSize||"aucune source"})`).join(" | "),"Tailles manquantes":products.filter(r=>r.missing).length,Commentaires:[...new Set(rows.map(r=>r.comments).filter(Boolean))].join(" | ")};}),[fitofan,reconciled]);const sizeValidationRows=useMemo(()=>reconciled.filter(r=>sizeNeedsValidation(r)).map(r=>({Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Commande:r.order,Produit:r.product,"Produit normalisé":r.productKey,"Produit Shopify brut":r.rawProduct,"Taille Shopify":r.shopifySize||"","Taille Supabase":r.supabaseSize||"","Taille manuelle":r.manualSizeRaw||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"","Statut validation":sizeValidationStatus(r),Commentaires:r.comments||""})),[reconciled]);
-const supplierFinalRows=useMemo(()=>{const map=new Map();expandRowsByFinalSizes(reconciled).filter(r=>isSupplierReady(r)).forEach(r=>{const key=`${r.product}|${r.team||"Non précisée"}|${r.finalSize}`;const prev=map.get(key)||{Produit:r.product,Équipe:r.team||"Non précisée",Taille:r.finalSize,Quantité:0};prev.Quantité+=Number(r.effectiveQty)||0;map.set(key,prev);});return Array.from(map.values()).sort((a,b)=>`${a.Produit}${a.Équipe}${a.Taille}`.localeCompare(`${b.Produit}${b.Équipe}${b.Taille}`));},[reconciled]);
+const supplierFinalRows=useMemo(()=>{const map=new Map();expandRowsByFinalSizes(reconciled).filter(r=>isSupplierReady(r)).forEach(r=>{const key=`${r.product}|${exportTeam(r)}|${r.finalSize}`;const prev=map.get(key)||{Produit:r.product,Équipe:exportTeam(r),Taille:r.finalSize,Quantité:0};prev.Quantité+=Number(r.effectiveQty)||0;map.set(key,prev);});return Array.from(map.values()).sort((a,b)=>`${a.Produit}${a.Équipe}${a.Taille}`.localeCompare(`${b.Produit}${b.Équipe}${b.Taille}`));},[reconciled,fitofan]);
 const supplierInternalRows=useMemo(()=>reconciled.filter(r=>r.kind==="product"&&!r.excluded).map(r=>({Commande:r.order,Compétiteur:r.competitor,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Produit:r.product,"Produit brut":r.rawProduct,Quantité:r.effectiveQty||r.quantity||1,"Taille Shopify":r.shopifySize||"","Taille Supabase":r.supabaseSize||"","Taille manuelle":r.manualSizeRaw||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"","Statut validation":sizeValidationStatus(r),Quantité:r.effectiveQty,Commentaires:r.comments||""})),[reconciled]);
 
 const engagementCorrectionsMap=useMemo(()=>{const unlink=new Set();const link=new Set();engagementCorrections.forEach(c=>{const k=engagementCorrectionKey(c.order_number,c.competitor,c.team);if(c.action==="unlink")unlink.add(k);if(c.action==="link")link.add(k);});return{unlink,link};},[engagementCorrections]);
@@ -1303,7 +1355,7 @@ const shopifyUnknownCompetitorRows=useMemo(()=>{
       Compétiteur:r.competitor,
       Email:r.email||"",
       Dojo:r.dojo||"",
-      Équipe:r.team||"",
+      Équipe:exportTeam(r),
       Commandes:new Set(),
       Produits:[],
       Engagement:false,
@@ -1386,8 +1438,8 @@ const orderSizeEditRows=useMemo(()=>{
       raw:r
     }));
 },[reconciled,orderSizeEditSearch]);
-const productsNoProductTeamRows=useMemo(()=>reconciled.filter(r=>r.kind==="product"&&!r.excluded&&!r.productTeam).map(r=>({Commande:r.order,Compétiteur:r.competitor,Email:r.email||"",Dojo:r.dojo||"","Équipe compétiteur":displayTeamCategory(r.team)||"","Équipe produit":supplierTeamForRow(r),Produit:r.product,"Produit Shopify brut":r.rawProduct||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"",Quantité:r.effectiveQty||r.quantity||1})),[reconciled]);
-const productTeamAuditRows=useMemo(()=>reconciled.filter(r=>r.kind==="product"&&!r.excluded).map(r=>({Commande:r.order,Compétiteur:r.competitor,Email:r.email||"",Dojo:r.dojo||"","Équipe compétiteur":displayTeamCategory(r.team)||"","Équipe produit":supplierTeamForRow(r),Produit:r.product,"Produit Shopify brut":r.rawProduct||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"",Quantité:r.effectiveQty||r.quantity||1})),[reconciled]);
+const productsNoProductTeamRows=useMemo(()=>reconciled.filter(r=>r.kind==="product"&&!r.excluded&&!r.productTeam).map(r=>({Commande:r.order,Compétiteur:r.competitor,Email:r.email||"",Dojo:r.dojo||"","Équipe compétiteur":displayTeamCategory(r.team)||"","Équipe produit":exportTeam(r),Produit:r.product,"Produit Shopify brut":r.rawProduct||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"",Quantité:r.effectiveQty||r.quantity||1})),[reconciled]);
+const productTeamAuditRows=useMemo(()=>reconciled.filter(r=>r.kind==="product"&&!r.excluded).map(r=>({Commande:r.order,Compétiteur:r.competitor,Email:r.email||"",Dojo:r.dojo||"","Équipe compétiteur":displayTeamCategory(r.team)||"","Équipe produit":exportTeam(r),Produit:r.product,"Produit Shopify brut":r.rawProduct||"","Taille finale":r.finalSize||"","Source taille":r.sourceSize||"",Quantité:r.effectiveQty||r.quantity||1})),[reconciled]);
 
 const supplierAuditRows=useMemo(()=>{
   return expandRowsByFinalSizes(reconciled||[])
@@ -1398,7 +1450,7 @@ const supplierAuditRows=useMemo(()=>{
       Email:r.email||"",
       Dojo:r.dojo||"",
       "Équipe compétiteur":displayTeamCategory(r.team)||"",
-      "Équipe produit":supplierTeamForRow(r),
+      "Équipe produit":exportTeam(r),
       Produit:r.product,
       "Produit Shopify brut":r.rawProduct||"",
       "Taille Shopify":r.shopifySize||"",
@@ -1408,7 +1460,7 @@ const supplierAuditRows=useMemo(()=>{
       "Inclus fournisseur":supplierIncludeRow(r)?"Oui":"Non",
       Quantité:Number(r.effectiveQty||r.quantity||0)||0
     }));
-},[reconciled]);
+},[reconciled,fitofan]);
 
 const supplierAuditSummaryRows=useMemo(()=>{
   const rows=supplierAuditRows;
@@ -1434,7 +1486,7 @@ const supplierFinalWithExceptionsRows=useMemo(()=>{
   const map=new Map();
   expandRowsByFinalSizes(reconciled||[]).filter(supplierIncludeRow).forEach(r=>{
     const product=r.product||"Produit";
-    const team=supplierTeamForRow(r);
+    const team=exportTeam(r);
     const size=supplierFinalSizeLabel(r);
     const status=supplierLineStatus(r);
     const key=`${product}|${team}|${size}|${status}`;
@@ -1468,8 +1520,8 @@ const commentSizeReviewRows=useMemo(()=>{
 
 const teamCategoryAuditRows=useMemo(()=>{
   const all=[
-    ...(fitofan?.competitors||[]).map(r=>({Source:"Fitofan",Nom:r.competitor,Équipe:r.team||"",Catégorie:displayTeamCategory(r.team)})),
-    ...(reconciled||[]).map(r=>({Source:"Shopify",Nom:r.competitor,Équipe:r.team||"",Catégorie:displayTeamCategory(r.team)}))
+    ...(fitofan?.competitors||[]).map(r=>({Source:"Fitofan",Nom:r.competitor,Équipe:exportTeam(r),Catégorie:displayTeamCategory(r.team)})),
+    ...(reconciled||[]).map(r=>({Source:"Shopify",Nom:r.competitor,Équipe:exportTeam(r),Catégorie:displayTeamCategory(r.team)}))
   ];
   const map=new Map();
   all.forEach(r=>{
@@ -1488,19 +1540,91 @@ const supplierMultiSizeWarningRows=useMemo(()=>reconciled.filter(r=>{
   const parts=finalSizeParts(r.finalSize||"");
   return qty>1 && parts.length>1 && parts.length!==qty;
 }).map(r=>({Commande:r.order,Compétiteur:r.competitor,Produit:r.product,"Produit brut":r.rawProduct,Quantité:quantityDisplay(r),"Tailles saisies":r.finalSize,"Nb tailles":finalSizeParts(r.finalSize||"").length,Alerte:`${finalSizeParts(r.finalSize||"").length} tailles pour quantité ${quantityDisplay(r)}`})),[reconciled]);
-const views={dashboard:{title:"Tableau de bord visuel",rows:dashboardFiltered},teamCategoryAudit:{title:"Audit catégories équipes",rows:teamCategoryAuditRows},supplierFinalWithExceptions:{title:"Export fournisseur avec exceptions",rows:supplierFinalWithExceptionsRows},supplierAuditSummary:{title:"Résumé audit fournisseur",rows:supplierAuditSummaryRows},supplierAudit:{title:"Audit fournisseur",rows:supplierAuditRows},productsNoProductTeam:{title:"Produits Shopify sans équipe",rows:productsNoProductTeamRows},productTeamAudit:{title:"Audit produits / équipes Shopify",rows:productTeamAuditRows},shopifyUnknownCompetitors:{title:"Shopify absent liste compétiteurs",rows:shopifyUnknownCompetitorRows},notFitofanWithOrders:{title:"Commandes avec FITOFAN = non",rows:notFitofanWithEngagementRows},fitofanStatusAudit:{title:"Audit statut FITOFAN",rows:fitofanStatusAuditRows},engagementManagement:{title:"Gestion liens engagements",rows:engagementManagementFilteredRows},engagementCorrections:{title:"Corrections engagements sauvegardées",rows:engagementCorrectionsRows},sizeValidation:{title:"Gestion / validation des tailles",rows:visibleSizeValidationRows},orderSizeEdit:{title:"Modifier tailles commandes",rows:orderSizeEditRows},commentSizeReview:{title:"Commandes avec commentaires",rows:commentSizeReviewRows},commentCorrections:{title:"Commentaires traités / validés",rows:commentCorrections.map(r=>({Commande:r.order_number,Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team)||r.team,Produit:r.product_key,"Produit brut":r.raw_product,Quantité:r.quantity||"", "Taille validée":r.size_normalized||r.size_raw,Commentaire:r.comment_text,"Commentaire traité":r.validated?"Oui":"Non"}))},supplierFinal:{title:"Export fournisseur final",rows:supplierFinalRows},supplierInternal:{title:"Export interne détaillé",rows:supplierInternalRows},participantsFinal:{title:"Export final participants",rows:finalParticipantsRows},internalEquipment:{title:"Commandes internes hors Shopify",rows:manualEquipmentOrders.map(r=>({ID:r.id,Commande:r.order_number,Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team)||r.team,Produit:r.product||r.raw_product,"Produit brut":r.raw_product,Taille:r.size_normalized||r.size_raw,Quantité:r.quantity,"Inclure fournisseur":r.include_supplier?"Oui":"Non","Inclure rapport client":r.include_client?"Oui":"Non",Notes:r.notes||""}))},manualParticipants:{title:"Ajouter / gérer participants",rows:manualCompetitors.map(r=>({Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Source:r.source||"manuel"}))},manualReconciliation:{title:"Engagements manquants à réconcilier",rows:manualReconciliationRows},manualLinks:{title:"Liens manuels sauvegardés",rows:manualLinksRows},unusualSizes:{title:"Tailles inhabituelles à vérifier",rows:unusualSizeRows},shopifyInitialMissing:{title:"Tailles Shopify manquantes initialement",rows:shopifyInitialMissingRows},missingSizes:{title:"Compétiteurs avec tailles manquantes",rows:competitorsMissingSizes},missingEngagements:{title:"Engagements manquants",rows:correctedMissingEngagementRows},audit:{title:"Contrôle qualité",rows:auditRows},supplierMultiSizeWarning:{title:"Alertes quantités / tailles multiples",rows:supplierMultiSizeWarningRows},detail:{title:"Détail global Shopify + Supabase",rows:detailRows},fitofan:{title:"Suivi par compétiteur Fitofan",rows:fitofanReport},supplier:{title:"Commande fournisseur",rows:supplierRows},supabase:{title:"Audit réponses Supabase",rows:supabaseAudit},fitofanComments:{title:"Commentaires Fitofan",rows:fitofan.comments}};const tabGroups=[
+const exportTeam=(row)=>resolveExportTeam(row,fitofan.competitors||[]);
+const clientTotalItemsRows=useMemo(()=>{
+  const map=new Map();
+  expandRowsByFinalSizes(reconciled||[])
+    .filter(r=>r.kind==="product")
+    .filter(r=>includeInClientReport(r))
+    .filter(r=>!r.excluded||r.internalOrder)
+    .forEach(r=>{
+      const product=r.product||"Produit";
+      const team=exportTeam(r);
+      const size=r.finalSize||"TAILLE MANQUANTE";
+      const status=supplierLineStatus(r);
+      const key=`${product}|${team}|${size}|${status}`;
+      const cur=map.get(key)||{Produit:product,Équipe:team,Taille:size,Statut:status,Quantité:0};
+      cur.Quantité += Number(r.effectiveQty||r.quantity||0)||0;
+      map.set(key,cur);
+    });
+  return Array.from(map.values()).sort((a,b)=>String(a.Produit).localeCompare(String(b.Produit))||String(a.Équipe).localeCompare(String(b.Équipe))||String(a.Taille).localeCompare(String(b.Taille)));
+},[reconciled]);
+
+const supplierProductionRows=useMemo(()=>{
+  const map=new Map();
+  expandRowsByFinalSizes(reconciled||[])
+    .filter(r=>r.kind==="product")
+    .filter(r=>includeInSupplierReport(r))
+    .forEach(r=>{
+      const product=r.product||"Produit";
+      const team=exportTeam(r);
+      const size=supplierFinalSizeLabel(r);
+      const status=supplierLineStatus(r);
+      const key=`${product}|${team}|${size}|${status}`;
+      const cur=map.get(key)||{Produit:product,Équipe:team,Taille:size,"Statut fournisseur":status,Quantité:0};
+      cur.Quantité += Number(r.effectiveQty||r.quantity||0)||0;
+      map.set(key,cur);
+    });
+  return Array.from(map.values()).sort((a,b)=>String(a.Produit).localeCompare(String(b.Produit))||String(a.Équipe).localeCompare(String(b.Équipe))||String(a.Taille).localeCompare(String(b.Taille)));
+},[reconciled]);
+
+const quantityByOrderAuditRows=useMemo(()=>expandRowsByFinalSizes(reconciled||[])
+  .filter(r=>r.kind==="product")
+  .map(r=>({
+    Commande:r.order,
+    Compétiteur:r.competitor,
+    Dojo:r.dojo,
+    Équipe:exportTeam(r),
+    Produit:r.product,
+    "Produit brut":r.rawProduct,
+    Taille:r.finalSize||"TAILLE MANQUANTE",
+    Quantité:Number(r.effectiveQty||r.quantity||0)||0,
+    Interne:r.internalOrder?"Oui":"Non",
+    "Inclus client":includeInClientReport(r)?"Oui":"Non",
+    "Inclus fournisseur":includeInSupplierReport(r)?"Oui":"Non"
+  })),[reconciled]);
+
+
+const missingTeamRows=useMemo(()=>expandRowsByFinalSizes(reconciled||[])
+  .filter(r=>r.kind==="product")
+  .map(r=>({...r,_exportTeam:exportTeam(r)}))
+  .filter(r=>r._exportTeam==="ÉQUIPE MANQUANTE")
+  .map(r=>({
+    Commande:r.order,
+    Compétiteur:r.competitor,
+    Email:r.email,
+    Dojo:r.dojo,
+    Produit:r.product,
+    "Produit brut":r.rawProduct,
+    Taille:r.finalSize||"TAILLE MANQUANTE",
+    Quantité:Number(r.effectiveQty||r.quantity||0)||0,
+    "Équipe détectée":r._exportTeam,
+    Commentaires:r.comments||""
+  })),[reconciled,fitofan]);
+
+const views={dashboard:{title:"Tableau de bord visuel",rows:dashboardFiltered},clientTotalItems:{title:"Export client Sunfuki - total items",rows:clientTotalItemsRows},supplierProduction:{title:"Export fournisseur production",rows:supplierProductionRows},quantityByOrderAudit:{title:"Audit quantités par commande",rows:quantityByOrderAuditRows},missingTeam:{title:"Audit équipes manquantes",rows:missingTeamRows},teamCategoryAudit:{title:"Audit catégories équipes",rows:teamCategoryAuditRows},supplierFinalWithExceptions:{title:"Export fournisseur avec exceptions",rows:supplierFinalWithExceptionsRows},supplierAuditSummary:{title:"Résumé audit fournisseur",rows:supplierAuditSummaryRows},supplierAudit:{title:"Audit fournisseur",rows:supplierAuditRows},productsNoProductTeam:{title:"Produits Shopify sans équipe",rows:productsNoProductTeamRows},productTeamAudit:{title:"Audit produits / équipes Shopify",rows:productTeamAuditRows},shopifyUnknownCompetitors:{title:"Shopify absent liste compétiteurs",rows:shopifyUnknownCompetitorRows},notFitofanWithOrders:{title:"Commandes avec FITOFAN = non",rows:notFitofanWithEngagementRows},fitofanStatusAudit:{title:"Audit statut FITOFAN",rows:fitofanStatusAuditRows},engagementManagement:{title:"Gestion liens engagements",rows:engagementManagementFilteredRows},engagementCorrections:{title:"Corrections engagements sauvegardées",rows:engagementCorrectionsRows},sizeValidation:{title:"Gestion / validation des tailles",rows:visibleSizeValidationRows},orderSizeEdit:{title:"Modifier tailles commandes",rows:orderSizeEditRows},commentSizeReview:{title:"Commandes avec commentaires",rows:commentSizeReviewRows},commentCorrections:{title:"Commentaires traités / validés",rows:commentCorrections.map(r=>({Commande:r.order_number,Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team)||r.team,Produit:r.product_key,"Produit brut":r.raw_product,Quantité:r.quantity||"", "Taille validée":r.size_normalized||r.size_raw,Commentaire:r.comment_text,"Commentaire traité":r.validated?"Oui":"Non"}))},supplierFinal:{title:"Export fournisseur final",rows:supplierFinalRows},supplierInternal:{title:"Export interne détaillé",rows:supplierInternalRows},participantsFinal:{title:"Export final participants",rows:finalParticipantsRows},internalEquipment:{title:"Commandes internes hors Shopify",rows:manualEquipmentOrders.map(r=>({ID:r.id,Commande:r.order_number,Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team)||r.team,Produit:r.product||r.raw_product,"Produit brut":r.raw_product,Taille:r.size_normalized||r.size_raw,Quantité:r.quantity,"Inclure fournisseur":r.include_supplier?"Oui":"Non","Inclure rapport client":r.include_client?"Oui":"Non",Notes:r.notes||""}))},manualParticipants:{title:"Ajouter / gérer participants",rows:manualCompetitors.map(r=>({Compétiteur:r.competitor,Email:r.email,Dojo:r.dojo,Équipe:displayTeamCategory(r.team),Source:r.source||"manuel"}))},manualReconciliation:{title:"Engagements manquants à réconcilier",rows:manualReconciliationRows},manualLinks:{title:"Liens manuels sauvegardés",rows:manualLinksRows},unusualSizes:{title:"Tailles inhabituelles à vérifier",rows:unusualSizeRows},shopifyInitialMissing:{title:"Tailles Shopify manquantes initialement",rows:shopifyInitialMissingRows},missingSizes:{title:"Compétiteurs avec tailles manquantes",rows:competitorsMissingSizes},missingEngagements:{title:"Engagements manquants",rows:correctedMissingEngagementRows},audit:{title:"Contrôle qualité",rows:auditRows},supplierMultiSizeWarning:{title:"Alertes quantités / tailles multiples",rows:supplierMultiSizeWarningRows},detail:{title:"Détail global Shopify + Supabase",rows:detailRows},fitofan:{title:"Suivi par compétiteur Fitofan",rows:fitofanReport},supplier:{title:"Commande fournisseur",rows:supplierRows},supabase:{title:"Audit réponses Supabase",rows:supabaseAudit},fitofanComments:{title:"Commentaires Fitofan",rows:fitofan.comments}};const tabGroups=[
 {id:"dashboard",label:"Tableau de bord",tabs:["dashboard"]},
 {id:"engagements",label:"Engagements",tabs:["engagementManagement","missingEngagements","manualReconciliation","engagementCorrections","manualLinks"]},
 {id:"sizes",label:"Tailles",tabs:["sizeValidation","orderSizeEdit","commentSizeReview","commentCorrections","missingSizes"]},
-{id:"supplier",label:"Fournisseur",tabs:["supplierFinal","supplierFinalWithExceptions","supplierAuditSummary","supplierAudit","supplier","supplierInternal"]},
+{id:"supplier",label:"Fournisseur",tabs:["supplierProduction","clientTotalItems","supplierFinalWithExceptions","supplierAuditSummary","quantityByOrderAudit","missingTeam","supplierAudit","supplier","supplierInternal"]},
 {id:"participants",label:"Participants",tabs:["fitofan","participantsFinal","manualParticipants","internalEquipment"]},
-{id:"audit",label:"Audit / contrôle",tabs:["audit","supplierMultiSizeWarning","teamCategoryAudit","productTeamAudit","productsNoProductTeam","shopifyUnknownCompetitors","notFitofanWithOrders","fitofanStatusAudit","detail","supabase","fitofanComments"]}
+{id:"audit",label:"Audit / contrôle",tabs:["audit","missingTeam","supplierMultiSizeWarning","teamCategoryAudit","productTeamAudit","productsNoProductTeam","shopifyUnknownCompetitors","notFitofanWithOrders","fitofanStatusAudit","detail","supabase","fitofanComments"]}
 ];
 const currentGroup=tabGroups.find(g=>g.tabs.includes(tab))||tabGroups[0];
 const visibleTabKeys=currentGroup.tabs.filter(k=>views[k]);
 function selectGroup(g){const first=g.tabs.find(k=>views[k]);if(first)setTab(first);}
 const current=views[tab];const filteredRows=tab==="dashboard"?dashboardFiltered:applyFilters(current.rows||[]);
-return <div className="app"><header><h1>Réconciliation Sunfuki V35</h1><p>Sources colorées · alertes compétiteurs · engagements manquants · exports filtrés par club.</p></header><section className="sourceStatusGrid">
+return <div className="app"><header><h1>Réconciliation Sunfuki V35.2</h1><p>Exports client / fournisseur · équipes normalisées par compétiteur · audit équipes manquantes.</p></header><section className="sourceStatusGrid">
         <div className={sourceStateClass(fitofanRaw.length)}>
           <div className="sourceTop">
             <strong>1. Fitofan</strong>
